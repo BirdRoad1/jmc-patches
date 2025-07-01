@@ -1,0 +1,538 @@
+From d006b30c09397e2e14dcf7ca2a03c3c1cfff23fb Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sun, 29 Jun 2025 03:08:22 -0400
+Subject: [PATCH 45/60] Add overlay support, keystrokes module (wip), cps
+ module, and drag-and-drop gui for editing overlay
+
+---
+ src/main/java/com/jlmsz/JClient.java          |   2 +
+ .../com/jlmsz/gui/overlay/CPSOverlay.java     |  46 +++++
+ .../jlmsz/gui/overlay/KeystrokesOverlay.java  |  45 +++++
+ .../java/com/jlmsz/gui/overlay/Overlay.java   |  65 +++++++
+ .../com/jlmsz/gui/overlay/ScreenOverlay.java  |  59 ++++++
+ .../jlmsz/gui/settings/EditOverlayGui.java    | 172 ++++++++++++++++++
+ .../java/com/jlmsz/module/impl/CPSModule.java |  32 ++++
+ .../jlmsz/module/impl/KeystrokesModule.java   |  30 +++
+ 8 files changed, 451 insertions(+)
+ create mode 100644 src/main/java/com/jlmsz/gui/overlay/CPSOverlay.java
+ create mode 100644 src/main/java/com/jlmsz/gui/overlay/KeystrokesOverlay.java
+ create mode 100644 src/main/java/com/jlmsz/gui/overlay/Overlay.java
+ create mode 100644 src/main/java/com/jlmsz/gui/overlay/ScreenOverlay.java
+ create mode 100644 src/main/java/com/jlmsz/gui/settings/EditOverlayGui.java
+ create mode 100644 src/main/java/com/jlmsz/module/impl/CPSModule.java
+ create mode 100644 src/main/java/com/jlmsz/module/impl/KeystrokesModule.java
+
+diff --git a/src/main/java/com/jlmsz/JClient.java b/src/main/java/com/jlmsz/JClient.java
+index 93bbb95..688bc72 100644
+--- a/src/main/java/com/jlmsz/JClient.java
++++ b/src/main/java/com/jlmsz/JClient.java
+@@ -3,6 +3,7 @@ package com.jlmsz;
+ import com.jlmsz.event.EventBus;
+ import com.jlmsz.event.EventHandler;
+ import com.jlmsz.event.impl.GameStartedEvent;
++import com.jlmsz.gui.overlay.ScreenOverlay;
+ import com.jlmsz.module.ModuleRegistry;
+ import com.jlmsz.util.hypixel.HypixelUtil;
+ import net.minecraft.util.ResourceLocation;
+@@ -11,6 +12,7 @@ public class JClient {
+     public static final EventBus EVENT_BUS = new EventBus();
+     public static JClient instance = new JClient();
+     public static final ResourceLocation ui = new ResourceLocation("jclient", "textures/gui/ui.png");
++    public static ScreenOverlay overlay = new ScreenOverlay();
+ 
+     public JClient() {
+         EVENT_BUS.registerListener(this);
+diff --git a/src/main/java/com/jlmsz/gui/overlay/CPSOverlay.java b/src/main/java/com/jlmsz/gui/overlay/CPSOverlay.java
+new file mode 100644
+index 0000000..a185145
+--- /dev/null
++++ b/src/main/java/com/jlmsz/gui/overlay/CPSOverlay.java
+@@ -0,0 +1,46 @@
++package com.jlmsz.gui.overlay;
++
++import com.jlmsz.JClient;
++import com.jlmsz.event.EventHandler;
++import com.jlmsz.event.impl.InputEvent;
++import com.jlmsz.event.impl.TickEvent;
++import com.jlmsz.util.GuiUtil;
++import net.minecraft.client.Minecraft;
++import net.minecraft.client.gui.Gui;
++
++import java.util.ArrayList;
++import java.util.List;
++
++public class CPSOverlay extends Overlay {
++    private int cps;
++    //    private int remainingTicks = 20;
++//    private int ms = 0;
++    private final List<Long> clicks = new ArrayList<>();
++
++    public CPSOverlay(Minecraft mc, int x, int y, int scale) {
++        super(mc, x, y, 75, 20, scale);
++
++        JClient.EVENT_BUS.registerListener(this);
++    }
++
++    @EventHandler
++    public void onTick(TickEvent event) {
++        clicks.removeIf(c -> c < System.currentTimeMillis() - 1000);
++    }
++
++    @EventHandler
++    public void onInput(InputEvent.Mouse event) {
++        if (event.getButton() == InputEvent.MouseButton.LEFT.getId()) {
++            clicks.add(System.currentTimeMillis());
++        }
++    }
++
++    @Override
++    public void render() {
++        float realCps = clicks.size();
++        int scaledWidth = (int) (width * scale);
++        int scaledHeight = (int) (height * scale);
++        GuiUtil.drawUnscaledRect(x, y, x + scaledWidth, y + scaledHeight, 0xAA222222);
++        GuiUtil.drawUnscaledCenteredString(mc.fontRendererObj, Integer.toString((int) realCps), x + scaledWidth / 2, y + scaledHeight / 2, 0xFFFF0000, 1);
++    }
++}
+diff --git a/src/main/java/com/jlmsz/gui/overlay/KeystrokesOverlay.java b/src/main/java/com/jlmsz/gui/overlay/KeystrokesOverlay.java
+new file mode 100644
+index 0000000..09b03cd
+--- /dev/null
++++ b/src/main/java/com/jlmsz/gui/overlay/KeystrokesOverlay.java
+@@ -0,0 +1,45 @@
++package com.jlmsz.gui.overlay;
++
++import com.jlmsz.module.config.IntModuleSetting;
++import com.jlmsz.util.GuiUtil;
++import net.minecraft.client.Minecraft;
++import net.minecraft.client.settings.KeyBinding;
++
++public class KeystrokesOverlay extends Overlay {
++    private final IntModuleSetting gap;
++    private final IntModuleSetting buttonSize;
++
++    public KeystrokesOverlay(Minecraft mc, IntModuleSetting gap, IntModuleSetting buttonSize, int x, int y, int scale) {
++        super(mc, x, y, 100, 80, scale);
++        this.gap = gap;
++        this.buttonSize = buttonSize;
++    }
++
++    public void drawBox(char letter, int key, int x, int y, int width, int height) {
++        GuiUtil.drawUnscaledRect(x, y, x + width, y + height, 0x77333333);
++        GuiUtil.drawUnscaledCenteredString(mc.fontRendererObj, Character.toString(letter), x + width / 2, y + width / 2, 0xFFFFFFFF, 1);
++    }
++
++    @Override
++    public void render() {
++//        int gap = 4;
++        int gap = (int) (this.gap.getValue() * scale);
++        int buttonSize = (int) (this.buttonSize.getValue());
++        width = (int) (buttonSize * 3 + gap * 2);
++        height = (int) (buttonSize * 2 + gap);
++
++        int scaledWidth = (int) (width * scale);
++        int scaledHeight = (int) (height * scale);
++
++//        GuiUtil.drawUnscaledRect(x, y, x + width, y + height, 0xFFFF0000);
++        int center = x + scaledWidth / 2;
++        int centerY = y + scaledHeight / 2;
++        int scaledSize = (int) (buttonSize*scale);
++//        String a = mc.gameSettings.keyBindForward2.getKeyDescription();
++        drawBox('W', 0, center - scaledSize / 2, y, scaledSize, scaledSize);
++        drawBox('A', 0, center - scaledSize / 2 - scaledSize - gap, y + scaledSize + gap, scaledSize, scaledSize);
++        drawBox('S', 0, center - scaledSize / 2, y + scaledSize + gap, scaledSize, scaledSize);
++        drawBox('D', 0, center + scaledSize / 2 + gap, y + scaledSize + gap, scaledSize, scaledSize);
++//        GuiUtil.drawUnscaledRect(x + width / 2 - 16, y, x + width / 2 + 16, y + 32, 0xFF00FF00);
++    }
++}
+diff --git a/src/main/java/com/jlmsz/gui/overlay/Overlay.java b/src/main/java/com/jlmsz/gui/overlay/Overlay.java
+new file mode 100644
+index 0000000..6ce3ac2
+--- /dev/null
++++ b/src/main/java/com/jlmsz/gui/overlay/Overlay.java
+@@ -0,0 +1,65 @@
++package com.jlmsz.gui.overlay;
++
++import net.minecraft.client.Minecraft;
++import net.minecraft.client.gui.Gui;
++import net.minecraft.util.MathHelper;
++
++public abstract class Overlay extends Gui {
++    protected final Minecraft mc;
++    protected int x;
++    protected int y;
++    protected int width;
++    protected int height;
++    protected float scale;
++
++    public Overlay(Minecraft mc, int x, int y, int width, int height, float scale) {
++        this.mc = mc;
++        this.x = x;
++        this.y = y;
++        this.width = width;
++        this.height = height;
++        this.scale = scale;
++    }
++
++    public abstract void render();
++
++    public int getX() {
++        return x;
++    }
++
++    public void setX(int x) {
++        this.x = MathHelper.clamp_int(x, 0, mc.displayWidth);
++    }
++
++    public int getY() {
++        return y;
++    }
++
++    public void setY(int y) {
++        this.y = MathHelper.clamp_int(y, 0, mc.displayHeight);
++    }
++
++    public int getWidth() {
++        return width;
++    }
++
++    public void setWidth(int width) {
++        this.width = width;
++    }
++
++    public int getHeight() {
++        return height;
++    }
++
++    public void setHeight(int height) {
++        this.height = height;
++    }
++
++    public float getScale() {
++        return scale;
++    }
++
++    public void setScale(float scale) {
++        this.scale = scale;
++    }
++}
+diff --git a/src/main/java/com/jlmsz/gui/overlay/ScreenOverlay.java b/src/main/java/com/jlmsz/gui/overlay/ScreenOverlay.java
+new file mode 100644
+index 0000000..a882980
+--- /dev/null
++++ b/src/main/java/com/jlmsz/gui/overlay/ScreenOverlay.java
+@@ -0,0 +1,59 @@
++package com.jlmsz.gui.overlay;
++
++import com.jlmsz.JClient;
++import com.jlmsz.event.EventHandler;
++import com.jlmsz.event.impl.GuiRenderEvent;
++
++import java.util.ArrayList;
++import java.util.List;
++
++public class ScreenOverlay {
++    // Stored in z-order
++    private static final List<Overlay> overlays = new ArrayList<>();
++    private static final ScreenOverlay instance = new ScreenOverlay();
++    private static boolean enabled = true;
++
++    public ScreenOverlay() {
++        JClient.EVENT_BUS.registerListener(this);
++    }
++
++    @EventHandler
++    public void onRenderEvent(GuiRenderEvent event) {
++        if (!enabled) return;
++        render();
++    }
++
++    public static void render() {
++        for (Overlay overlay : overlays) {
++            overlay.render();
++        }
++    }
++
++    public static void sendToTop(Overlay overlay) {
++        int index = overlays.indexOf(overlay);
++        if (index == -1) return;
++        overlays.remove(index);
++        overlays.add(overlay);
++    }
++
++    public static void registerOverlay(Overlay overlay) {
++        if (!overlays.contains(overlay))
++            overlays.add(overlay);
++    }
++
++    public static void removeOverlay(Overlay overlay) {
++        overlays.remove(overlay);
++    }
++
++    public static void disable() {
++        enabled = false;
++    }
++
++    public static void enable() {
++        enabled = true;
++    }
++
++    public static List<Overlay> getOverlays() {
++        return new ArrayList<>(overlays);
++    }
++}
+diff --git a/src/main/java/com/jlmsz/gui/settings/EditOverlayGui.java b/src/main/java/com/jlmsz/gui/settings/EditOverlayGui.java
+new file mode 100644
+index 0000000..3bd5383
+--- /dev/null
++++ b/src/main/java/com/jlmsz/gui/settings/EditOverlayGui.java
+@@ -0,0 +1,172 @@
++package com.jlmsz.gui.settings;
++
++import com.jlmsz.gui.overlay.Overlay;
++import com.jlmsz.gui.overlay.ScreenOverlay;
++import com.jlmsz.util.GuiUtil;
++import net.minecraft.client.gui.GuiScreen;
++import net.minecraft.util.MathHelper;
++import org.lwjgl.input.Keyboard;
++import org.lwjgl.opengl.GL11;
++
++import java.io.IOException;
++import java.util.List;
++
++public class EditOverlayGui extends GuiScreen {
++    private Overlay draggedOverlay;
++    private Overlay lastDraggedOverlay;
++    private int dragStartX; // used for resize
++    private int dragOffsetX;
++    private int dragOffsetY;
++    private boolean[] navFlags = {false, false, false, false};
++
++    // dragging
++    private boolean resizing = false;
++    private double initialDistanceX;
++    private double initialScale;
++
++    @Override
++    public void initGui() {
++        ScreenOverlay.disable();
++    }
++
++    @Override
++    public void onGuiClosed() {
++        ScreenOverlay.enable();
++    }
++
++    @Override
++    public void drawScreen(int mouseX, int mouseY, float partialTicks) {
++        drawDefaultBackground();
++        super.drawScreen(mouseX, mouseY, partialTicks);
++
++        // Hovering effect
++        List<Overlay> overlays = ScreenOverlay.getOverlays();
++        Overlay hovering = null;
++        for (int i = overlays.size() - 1; i >= 0; i--) {
++            Overlay overlay = overlays.get(i);
++            int x = overlay.getX();
++            int y = overlay.getY();
++            int width = (int) (overlay.getWidth() * overlay.getScale());
++            int height = (int) (overlay.getHeight() * overlay.getScale());
++            if (mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height) {
++                // Hovering over this one
++                GuiUtil.drawUnscaledRect(x, y, x + width, y + height, 0x44000000);
++                hovering = overlay;
++                break;
++            }
++        }
++
++        ScreenOverlay.render();
++
++        if (hovering != null) {
++            int x = hovering.getX();
++            int y = hovering.getY();
++
++            int width = (int) (hovering.getWidth() * hovering.getScale());
++            int height = (int) (hovering.getHeight() * hovering.getScale());
++
++
++            GuiUtil.drawUnscaledRect(x + width - 1, y + height - 1, x + width + 1, y + height + 1, 0xFFFFFFFF);
++        }
++
++        if (draggedOverlay != null) {
++            if (resizing) {
++                // resizing
++                int movement = ((mouseX - dragStartX)) / 2;
++//                float scaleFactor = MathHelper.clamp_float(movement, 1, 5);
++                double newDistanceX = Math.abs(draggedOverlay.getX() - mouseX);
++                if (initialDistanceX > 0) {
++                    double newScale = initialScale * (newDistanceX / initialDistanceX);
++                    newScale = MathHelper.clamp_double(newScale, 1.0D, 1.5D);
++                    System.out.println("HI:" + newScale);
++
++                    draggedOverlay.setScale((float) newScale);
++                }
++            } else {
++                // dragging
++                boolean snap = Keyboard.isKeyDown(Keyboard.KEY_LSHIFT);
++
++                if (snap) {
++                    mouseX = Math.round(mouseX / 5f) * 5;
++                    mouseY = Math.round(mouseY / 5f) * 5;
++                }
++
++                draggedOverlay.setX(mouseX - dragOffsetX);
++                draggedOverlay.setY(mouseY - dragOffsetY);
++            }
++        }
++
++        if (Keyboard.isKeyDown(Keyboard.KEY_LEFT)) {
++            if (!navFlags[0]) {
++                lastDraggedOverlay.setX(lastDraggedOverlay.getX() - 5);
++                navFlags[0] = true;
++            }
++        } else {
++            navFlags[0] = false;
++        }
++
++        if (Keyboard.isKeyDown(Keyboard.KEY_RIGHT)) {
++            if (!navFlags[1]) {
++                lastDraggedOverlay.setX(lastDraggedOverlay.getX() + 5);
++                navFlags[1] = true;
++            }
++        } else {
++            navFlags[1] = false;
++        }
++
++        if (Keyboard.isKeyDown(Keyboard.KEY_UP)) {
++            if (!navFlags[2]) {
++                lastDraggedOverlay.setY(lastDraggedOverlay.getY() - 5);
++                navFlags[2] = true;
++            }
++        } else {
++            navFlags[2] = false;
++        }
++
++        if (Keyboard.isKeyDown(Keyboard.KEY_DOWN)) {
++            if (!navFlags[3]) {
++                lastDraggedOverlay.setY(lastDraggedOverlay.getY() + 5);
++                navFlags[3] = true;
++            }
++        } else {
++            navFlags[3] = false;
++        }
++
++
++    }
++
++    @Override
++    protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
++        super.mouseClicked(mouseX, mouseY, mouseButton);
++        List<Overlay> overlays = ScreenOverlay.getOverlays();
++        for (int i = overlays.size() - 1; i >= 0; i--) {
++            Overlay overlay = overlays.get(i);
++            double width = overlay.getWidth() * overlay.getScale();
++            double height = overlay.getHeight() * overlay.getScale();
++            if (mouseX >= overlay.getX() && mouseX <= overlay.getX() + width && mouseY >= overlay.getY() && mouseY <= overlay.getY() + height) {
++                draggedOverlay = lastDraggedOverlay = overlay;
++                dragOffsetX = mouseX - overlay.getX();
++                dragOffsetY = mouseY - overlay.getY();
++                ScreenOverlay.sendToTop(overlay);
++
++                // bottom right corner
++                double dist = GuiUtil.distanceSq(mouseX, mouseY, overlay.getX() + width, overlay.getY() + height);
++                if (dist <= 4 * 4) {
++                    resizing = true;
++                    initialDistanceX = Math.abs(mouseX - overlay.getX());
++                    initialScale = overlay.getScale();
++                    dragStartX = mouseX;
++                }
++
++                break;
++            }
++        }
++    }
++
++    @Override
++    protected void mouseReleased(int mouseX, int mouseY, int state) {
++        draggedOverlay = null;
++        resizing = false;
++        super.mouseReleased(mouseX, mouseY, state);
++    }
++}
+diff --git a/src/main/java/com/jlmsz/module/impl/CPSModule.java b/src/main/java/com/jlmsz/module/impl/CPSModule.java
+new file mode 100644
+index 0000000..ff9e87e
+--- /dev/null
++++ b/src/main/java/com/jlmsz/module/impl/CPSModule.java
+@@ -0,0 +1,32 @@
++package com.jlmsz.module.impl;
++
++import com.jlmsz.JClient;
++import com.jlmsz.gui.overlay.CPSOverlay;
++import com.jlmsz.gui.overlay.ScreenOverlay;
++import com.jlmsz.module.Module;
++import com.jlmsz.module.ModuleCategory;
++
++public class CPSModule extends Module {
++    private final CPSOverlay overlay = new CPSOverlay(mc, 50, 50, 1);
++
++    public CPSModule() {
++        super("CPS", "View your clicks per second", ModuleCategory.RENDER);
++        JClient.EVENT_BUS.registerListener(this);
++    }
++
++//    @EventHandler
++//    public void onRender(GuiRenderEvent event) {
++//        if (!this.isEnabled()) return;
++//        overlay.render();
++//    }
++
++    @Override
++    public void setEnabled(boolean enabled) {
++        super.setEnabled(enabled);
++        if (enabled) {
++            ScreenOverlay.registerOverlay(overlay);
++        } else {
++            ScreenOverlay.removeOverlay(overlay);
++        }
++    }
++}
+diff --git a/src/main/java/com/jlmsz/module/impl/KeystrokesModule.java b/src/main/java/com/jlmsz/module/impl/KeystrokesModule.java
+new file mode 100644
+index 0000000..976be1d
+--- /dev/null
++++ b/src/main/java/com/jlmsz/module/impl/KeystrokesModule.java
+@@ -0,0 +1,30 @@
++package com.jlmsz.module.impl;
++
++import com.jlmsz.gui.overlay.KeystrokesOverlay;
++import com.jlmsz.gui.overlay.Overlay;
++import com.jlmsz.gui.overlay.ScreenOverlay;
++import com.jlmsz.module.Module;
++import com.jlmsz.module.ModuleCategory;
++import com.jlmsz.module.config.IntModuleSetting;
++
++public class KeystrokesModule extends Module {
++    private final IntModuleSetting gap = new IntModuleSetting(2, 0, 10);
++    private final IntModuleSetting buttonSize = new IntModuleSetting(32, 16, 64);
++    private final KeystrokesOverlay overlay = new KeystrokesOverlay(mc, gap, buttonSize, 0, 0, 1);
++
++    public KeystrokesModule() {
++        super("Keystrokes", "See your key presses in real time", ModuleCategory.RENDER);
++        addSetting("Gap", gap);
++        addSetting("Button Size", buttonSize);
++    }
++
++    @Override
++    public void setEnabled(boolean enabled) {
++        super.setEnabled(enabled);
++        if (enabled) {
++            ScreenOverlay.registerOverlay(overlay);
++        } else {
++            ScreenOverlay.removeOverlay(overlay);
++        }
++    }
++}
+-- 
+2.34.1
+

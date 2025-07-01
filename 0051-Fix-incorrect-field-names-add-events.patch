@@ -1,0 +1,395 @@
+From 368b33f4e2cfe4ff2cab4eaa055edd6e9f9313da Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Mon, 30 Jun 2025 13:06:05 -0400
+Subject: [PATCH 51/60] Fix incorrect field names, add events
+
+---
+ .../java/net/minecraft/client/Minecraft.java  | 70 +++++++------------
+ .../net/minecraft/client/gui/GuiIngame.java   |  2 +-
+ .../minecraft/client/gui/GuiScreenDemo.java   | 10 +--
+ .../client/network/NetHandlerPlayClient.java  |  2 +-
+ .../client/renderer/RenderGlobal.java         | 10 +--
+ .../client/renderer/entity/RenderFish.java    |  9 ++-
+ .../client/renderer/entity/RenderManager.java |  5 +-
+ .../util/MovementInputFromOptions.java        |  3 +-
+ .../java/net/optifine/shaders/Shaders.java    |  4 +-
+ .../net/optifine/shaders/ShadersRender.java   |  6 +-
+ 10 files changed, 48 insertions(+), 73 deletions(-)
+
+diff --git a/src/main/java/net/minecraft/client/Minecraft.java b/src/main/java/net/minecraft/client/Minecraft.java
+index 2c00027..d72c72d 100644
+--- a/src/main/java/net/minecraft/client/Minecraft.java
++++ b/src/main/java/net/minecraft/client/Minecraft.java
+@@ -966,21 +966,21 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
+         GlStateManager.enableTexture2D();
+ 
+         if (this.thePlayer != null && this.thePlayer.isEntityInsideOpaqueBlock()) {
+-            this.gameSettings.showDebugInfo = 0;
++            this.gameSettings.perspective = 0;
+         }
+ 
+         this.mcProfiler.endSection();
+ 
+         if (!this.skipRenderWorld) {
+             this.mcProfiler.endStartSection("gameRenderer");
+-            JClient.EVENT_BUS.invokeEvent(new RenderEvent.Pre());
++            JClient.EVENT_BUS.invokeEvent(new RenderEvent.Pre(this.timer.renderPartialTicks));
+             this.entityRenderer.updateCameraAndRender(this.timer.renderPartialTicks, i);
+             this.mcProfiler.endSection();
+         }
+ 
+         this.mcProfiler.endSection();
+ 
+-        if (this.gameSettings.showDebugProfilerChart && this.gameSettings.showLagometer && !this.gameSettings.thirdPersonView) {
++        if (this.gameSettings.showDebugProfilerChart && this.gameSettings.showLagometer && !this.gameSettings.hideGUI) {
+             if (!this.mcProfiler.profilingEnabled) {
+                 this.mcProfiler.clearProfiling();
+             }
+@@ -1400,27 +1400,7 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
+                     this.entityRenderer.itemRenderer.resetEquippedProgress2();
+                 }
+             }
+-        } /*else {
+-            ItemStack itemstack1 = this.thePlayer.inventory.getCurrentItem();
+-            if (itemstack1 != null) {
+-
+-                if (itemstack1.getItem() instanceof ItemFood) {
+-                    BlockPos blockpos = this.objectMouseOver.getBlockPos();
+-                    playerController.resetBlockRemoving();
+-                    this.playerController.onPlayerRightClick(this.thePlayer, this.theWorld, itemstack1, blockpos, this.objectMouseOver.sideHit, this.objectMouseOver.hitVec);
+-
+-//                    thePlayer.setItemInUse(itemstack1, itemstack1.getMaxItemUseDuration());
+-                }
+-            }
+-//            ItemStack itemstack = itemstack1.useItemRightClick(this.theWorld, thePlayer);
+-            if (itemstack1 != null) {
+-//                thePlayer.setFakeItemInUseCount(itemstack1.getMaxItemUseDuration());
+-            }// TODO: right click while hitting block
+-
+-//            this.leftClickCounter = 0;
+-//            playerController.resetBlockRemoving();
+-
+-        }*/
++        }
+     }
+ 
+     /**
+@@ -1660,72 +1640,72 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
+                             k = -999; // prevent key handling
+                         }
+ 
+-                        if (k == 1) {
++                        if (k == Keyboard.KEY_ESCAPE) {
+                             this.displayInGameMenu();
+                         }
+ 
+-                        if (k == 32 && Keyboard.isKeyDown(61) && this.ingameGUI != null) {
++                        if (k == Keyboard.KEY_D && Keyboard.isKeyDown(Keyboard.KEY_F3) && this.ingameGUI != null) {
+                             this.ingameGUI.getChatGUI().clearChatMessages();
+                         }
+ 
+-                        if (k == 31 && Keyboard.isKeyDown(61)) {
++                        if (k == Keyboard.KEY_S && Keyboard.isKeyDown(Keyboard.KEY_F3)) {
+                             this.refreshResources();
+                         }
+ 
+-                        if (k == 20 && Keyboard.isKeyDown(61)) {
++                        if (k == Keyboard.KEY_T && Keyboard.isKeyDown(Keyboard.KEY_F3)) {
+                             this.refreshResources();
+                         }
+ 
+-                        if (k == 33 && Keyboard.isKeyDown(61)) {
++                        if (k == Keyboard.KEY_F && Keyboard.isKeyDown(Keyboard.KEY_F3)) {
+                             this.gameSettings.setOptionValue(GameSettings.Options.RENDER_DISTANCE, GuiScreen.isShiftKeyDown() ? -1 : 1);
+                         }
+ 
+-                        if (k == 30 && Keyboard.isKeyDown(61)) {
++                        if (k == Keyboard.KEY_A && Keyboard.isKeyDown(Keyboard.KEY_F3)) {
+                             this.renderGlobal.loadRenderers();
+                         }
+ 
+-                        if (k == 35 && Keyboard.isKeyDown(61)) {
++                        if (k == Keyboard.KEY_H && Keyboard.isKeyDown(Keyboard.KEY_F3)) {
+                             this.gameSettings.advancedItemTooltips = !this.gameSettings.advancedItemTooltips;
+                             this.gameSettings.saveOptions();
+                         }
+ 
+-                        if (k == 48 && Keyboard.isKeyDown(61)) {
++                        if (k == Keyboard.KEY_B && Keyboard.isKeyDown(Keyboard.KEY_F3)) {
+                             this.renderManager.setDebugBoundingBox(!this.renderManager.isDebugBoundingBox());
+                         }
+ 
+-                        if (k == 25 && Keyboard.isKeyDown(61)) {
++                        if (k == Keyboard.KEY_P && Keyboard.isKeyDown(Keyboard.KEY_F3)) {
+                             this.gameSettings.pauseOnLostFocus = !this.gameSettings.pauseOnLostFocus;
+                             this.gameSettings.saveOptions();
+                         }
+ 
+-                        if (k == 59) {
+-                            this.gameSettings.thirdPersonView = !this.gameSettings.thirdPersonView;
++                        if (k == Keyboard.KEY_F1) {
++                            this.gameSettings.hideGUI = !this.gameSettings.hideGUI;
+                         }
+ 
+-                        if (k == 61) {
++                        if (k == Keyboard.KEY_F3) {
+                             this.gameSettings.showDebugProfilerChart = !this.gameSettings.showDebugProfilerChart;
+                             this.gameSettings.showLagometer = GuiScreen.isShiftKeyDown();
+                             this.gameSettings.lastServer = GuiScreen.isAltKeyDown();
+                         }
+ 
+                         if (this.gameSettings.keyBindPerspective.isPressed()) {
+-                            ++this.gameSettings.showDebugInfo;
++                            ++this.gameSettings.perspective;
+ 
+-                            if (this.gameSettings.showDebugInfo > 2) {
+-                                this.gameSettings.showDebugInfo = 0;
++                            if (this.gameSettings.perspective > 2) {
++                                this.gameSettings.perspective = 0;
+                             }
+ 
+-                            if (this.gameSettings.showDebugInfo == 0) {
++                            if (this.gameSettings.perspective == 0) {
+                                 this.entityRenderer.loadEntityShader(this.getRenderViewEntity());
+-                            } else if (this.gameSettings.showDebugInfo == 1) {
+-                                this.entityRenderer.loadEntityShader((Entity) null);
++                            } else if (this.gameSettings.perspective == 1) {
++                                this.entityRenderer.loadEntityShader(null);
+                             }
+ 
+                             this.renderGlobal.setDisplayListEntitiesDirty();
+                         }
+ 
+                         if (this.gameSettings.keyBindSmoothCamera.isPressed()) {
+-                            this.gameSettings.debugCamEnable = !this.gameSettings.debugCamEnable;
++                            this.gameSettings.smoothCamEnabled = !this.gameSettings.smoothCamEnabled;
+                         }
+ 
+                         if (this.gameSettings.keyBindClientSettings.isPressed()) {
+@@ -1734,7 +1714,7 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
+                     }
+ 
+                     if (this.gameSettings.showDebugProfilerChart && this.gameSettings.showLagometer) {
+-                        if (k == 11) {
++                        if (k == Keyboard.KEY_0) {
+                             this.updateDebugProfilerName(0);
+                         }
+ 
+@@ -2075,7 +2055,7 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
+     }
+ 
+     public static boolean isGuiEnabled() {
+-        return theMinecraft == null || !theMinecraft.gameSettings.thirdPersonView;
++        return theMinecraft == null || !theMinecraft.gameSettings.hideGUI;
+     }
+ 
+     public static boolean isFancyGraphicsEnabled() {
+diff --git a/src/main/java/net/minecraft/client/gui/GuiIngame.java b/src/main/java/net/minecraft/client/gui/GuiIngame.java
+index 13a3aa0..4e32001 100644
+--- a/src/main/java/net/minecraft/client/gui/GuiIngame.java
++++ b/src/main/java/net/minecraft/client/gui/GuiIngame.java
+@@ -170,7 +170,7 @@ public class GuiIngame extends Gui {
+ 
+         ItemStack itemstack = this.mc.thePlayer.inventory.armorItemInSlot(3);
+ 
+-        if (this.mc.gameSettings.showDebugInfo == 0 && itemstack != null && itemstack.getItem() == Item.getItemFromBlock(Blocks.pumpkin)) {
++        if (this.mc.gameSettings.perspective == 0 && itemstack != null && itemstack.getItem() == Item.getItemFromBlock(Blocks.pumpkin)) {
+             this.renderPumpkinOverlay(scaledresolution);
+         }
+ 
+diff --git a/src/main/java/net/minecraft/client/gui/GuiScreenDemo.java b/src/main/java/net/minecraft/client/gui/GuiScreenDemo.java
+index 0490d7c..b53b90e 100644
+--- a/src/main/java/net/minecraft/client/gui/GuiScreenDemo.java
++++ b/src/main/java/net/minecraft/client/gui/GuiScreenDemo.java
+@@ -87,11 +87,11 @@ public class GuiScreenDemo extends GuiScreen
+         this.fontRendererObj.drawString(I18n.format("demo.help.title", new Object[0]), i, j, 2039583);
+         j = j + 12;
+         GameSettings gamesettings = this.mc.gameSettings;
+-        this.fontRendererObj.drawString(I18n.format("demo.help.movementShort", new Object[] {GameSettings.getKeyDisplayString(gamesettings.keyBindForward2.getKeyCode()), GameSettings.getKeyDisplayString(gamesettings.keyBindLeft.getKeyCode()), GameSettings.getKeyDisplayString(gamesettings.keyBindBack.getKeyCode()), GameSettings.getKeyDisplayString(gamesettings.keyBindRight.getKeyCode())}), i, j, 5197647);
+-        this.fontRendererObj.drawString(I18n.format("demo.help.movementMouse", new Object[0]), i, j + 12, 5197647);
+-        this.fontRendererObj.drawString(I18n.format("demo.help.jump", new Object[] {GameSettings.getKeyDisplayString(gamesettings.keyBindJump.getKeyCode())}), i, j + 24, 5197647);
+-        this.fontRendererObj.drawString(I18n.format("demo.help.inventory", new Object[] {GameSettings.getKeyDisplayString(gamesettings.keyBindInventory.getKeyCode())}), i, j + 36, 5197647);
+-        this.fontRendererObj.drawSplitString(I18n.format("demo.help.fullWrapped", new Object[0]), i, j + 68, 218, 2039583);
++        this.fontRendererObj.drawString(I18n.format("demo.help.movementShort", GameSettings.getKeyDisplayString(gamesettings.keyBindForward.getKeyCode()), GameSettings.getKeyDisplayString(gamesettings.keyBindLeft.getKeyCode()), GameSettings.getKeyDisplayString(gamesettings.keyBindBack.getKeyCode()), GameSettings.getKeyDisplayString(gamesettings.keyBindRight.getKeyCode())), i, j, 5197647);
++        this.fontRendererObj.drawString(I18n.format("demo.help.movementMouse"), i, j + 12, 5197647);
++        this.fontRendererObj.drawString(I18n.format("demo.help.jump", GameSettings.getKeyDisplayString(gamesettings.keyBindJump.getKeyCode())), i, j + 24, 5197647);
++        this.fontRendererObj.drawString(I18n.format("demo.help.inventory", GameSettings.getKeyDisplayString(gamesettings.keyBindInventory.getKeyCode())), i, j + 36, 5197647);
++        this.fontRendererObj.drawSplitString(I18n.format("demo.help.fullWrapped"), i, j + 68, 218, 2039583);
+         super.drawScreen(mouseX, mouseY, partialTicks);
+     }
+ }
+diff --git a/src/main/java/net/minecraft/client/network/NetHandlerPlayClient.java b/src/main/java/net/minecraft/client/network/NetHandlerPlayClient.java
+index 61ab35d..e7d9206 100644
+--- a/src/main/java/net/minecraft/client/network/NetHandlerPlayClient.java
++++ b/src/main/java/net/minecraft/client/network/NetHandlerPlayClient.java
+@@ -1034,7 +1034,7 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
+             if (f == 0.0F) {
+                 this.gameController.displayGuiScreen(new GuiScreenDemo());
+             } else if (f == 101.0F) {
+-                this.gameController.ingameGUI.getChatGUI().printChatMessage(new ChatComponentTranslation("demo.help.movement", new Object[]{GameSettings.getKeyDisplayString(gamesettings.keyBindForward2.getKeyCode()), GameSettings.getKeyDisplayString(gamesettings.keyBindLeft.getKeyCode()), GameSettings.getKeyDisplayString(gamesettings.keyBindBack.getKeyCode()), GameSettings.getKeyDisplayString(gamesettings.keyBindRight.getKeyCode())}));
++                this.gameController.ingameGUI.getChatGUI().printChatMessage(new ChatComponentTranslation("demo.help.movement", GameSettings.getKeyDisplayString(gamesettings.keyBindForward.getKeyCode()), GameSettings.getKeyDisplayString(gamesettings.keyBindLeft.getKeyCode()), GameSettings.getKeyDisplayString(gamesettings.keyBindBack.getKeyCode()), GameSettings.getKeyDisplayString(gamesettings.keyBindRight.getKeyCode())));
+             } else if (f == 102.0F) {
+                 this.gameController.ingameGUI.getChatGUI().printChatMessage(new ChatComponentTranslation("demo.help.jump", new Object[]{GameSettings.getKeyDisplayString(gamesettings.keyBindJump.getKeyCode())}));
+             } else if (f == 103.0F) {
+diff --git a/src/main/java/net/minecraft/client/renderer/RenderGlobal.java b/src/main/java/net/minecraft/client/renderer/RenderGlobal.java
+index b55ada7..273c73d 100644
+--- a/src/main/java/net/minecraft/client/renderer/RenderGlobal.java
++++ b/src/main/java/net/minecraft/client/renderer/RenderGlobal.java
+@@ -55,7 +55,6 @@ import net.minecraft.block.state.IBlockState;
+ import net.minecraft.client.Minecraft;
+ import net.minecraft.client.audio.ISound;
+ import net.minecraft.client.audio.PositionedSoundRecord;
+-import net.minecraft.client.gui.GuiScreen;
+ import net.minecraft.client.multiplayer.WorldClient;
+ import net.minecraft.client.particle.EntityFX;
+ import net.minecraft.client.renderer.chunk.ChunkRenderDispatcher;
+@@ -737,8 +736,7 @@ public class RenderGlobal implements IWorldAccess, IResourceManagerReloadListene
+                     boolean flag2 = this.mc.getRenderViewEntity() instanceof EntityLivingBase && ((EntityLivingBase)this.mc.getRenderViewEntity()).isPlayerSleeping();
+                     boolean flag3 = entity3.isInRangeToRender3d(d0, d1, d2) && (entity3.ignoreFrustumCheck || camera.isBoundingBoxInFrustum(entity3.getEntityBoundingBox()) || entity3.riddenByEntity == this.mc.thePlayer) && entity3 instanceof EntityPlayer;
+ 
+-                    if ((entity3 != this.mc.getRenderViewEntity() || this.mc.gameSettings.showDebugInfo != 0 || flag2) && flag3)
+-                    {
++                    if ((entity3 != this.mc.getRenderViewEntity() || this.mc.gameSettings.perspective != 0 || flag2) && flag3) {
+                         this.renderManager.renderEntitySimple(entity3, partialTicks);
+                     }
+                 }
+@@ -807,8 +805,7 @@ public class RenderGlobal implements IWorldAccess, IResourceManagerReloadListene
+ 
+                                 boolean flag5 = this.mc.getRenderViewEntity() instanceof EntityLivingBase ? ((EntityLivingBase)this.mc.getRenderViewEntity()).isPlayerSleeping() : false;
+ 
+-                                if ((entity2 != this.mc.getRenderViewEntity() || flag8 || this.mc.gameSettings.showDebugInfo != 0 || flag5) && (entity2.posY < 0.0D || entity2.posY >= 256.0D || this.theWorld.isBlockLoaded(new BlockPos(entity2))))
+-                                {
++                                if ((entity2 != this.mc.getRenderViewEntity() || flag8 || this.mc.gameSettings.perspective != 0 || flag5) && (entity2.posY < 0.0D || entity2.posY >= 256.0D || this.theWorld.isBlockLoaded(new BlockPos(entity2)))) {
+                                     ++this.countEntitiesRendered;
+                                     this.renderedEntity = entity2;
+ 
+@@ -1415,8 +1412,7 @@ public class RenderGlobal implements IWorldAccess, IResourceManagerReloadListene
+         float f = (float)((double)entityIn.prevRotationPitch + (double)(entityIn.rotationPitch - entityIn.prevRotationPitch) * partialTicks);
+         float f1 = (float)((double)entityIn.prevRotationYaw + (double)(entityIn.rotationYaw - entityIn.prevRotationYaw) * partialTicks);
+ 
+-        if (Minecraft.getMinecraft().gameSettings.showDebugInfo == 2)
+-        {
++        if (Minecraft.getMinecraft().gameSettings.perspective == 2) {
+             f += 180.0F;
+         }
+ 
+diff --git a/src/main/java/net/minecraft/client/renderer/entity/RenderFish.java b/src/main/java/net/minecraft/client/renderer/entity/RenderFish.java
+index 4d43710..1e56d25 100644
+--- a/src/main/java/net/minecraft/client/renderer/entity/RenderFish.java
++++ b/src/main/java/net/minecraft/client/renderer/entity/RenderFish.java
+@@ -66,11 +66,10 @@ public class RenderFish extends Render<EntityFishHook>
+             double d2 = entity.angler.prevPosZ + (entity.angler.posZ - entity.angler.prevPosZ) * (double)partialTicks + vec3.zCoord;
+             double d3 = (double)entity.angler.getEyeHeight();
+ 
+-            if (this.renderManager.getOptions() != null && this.renderManager.getOptions().showDebugInfo > 0 || entity.angler != Minecraft.getMinecraft().thePlayer)
+-            {
+-                float f9 = (entity.angler.prevRenderYawOffset + (entity.angler.renderYawOffset - entity.angler.prevRenderYawOffset) * partialTicks) * (float)Math.PI / 180.0F;
+-                double d4 = (double)MathHelper.sin(f9);
+-                double d6 = (double)MathHelper.cos(f9);
++            if (this.renderManager.getOptions() != null && this.renderManager.getOptions().perspective > 0 || entity.angler != Minecraft.getMinecraft().thePlayer) {
++                float f9 = (entity.angler.prevRenderYawOffset + (entity.angler.renderYawOffset - entity.angler.prevRenderYawOffset) * partialTicks) * (float) Math.PI / 180.0F;
++                double d4 = MathHelper.sin(f9);
++                double d6 = MathHelper.cos(f9);
+                 double d8 = 0.35D;
+                 double d10 = 0.8D;
+                 d0 = entity.angler.prevPosX + (entity.angler.posX - entity.angler.prevPosX) * (double)partialTicks - d6 * 0.35D - d4 * 0.8D;
+diff --git a/src/main/java/net/minecraft/client/renderer/entity/RenderManager.java b/src/main/java/net/minecraft/client/renderer/entity/RenderManager.java
+index 035ca97..8ced420 100644
+--- a/src/main/java/net/minecraft/client/renderer/entity/RenderManager.java
++++ b/src/main/java/net/minecraft/client/renderer/entity/RenderManager.java
+@@ -210,7 +210,7 @@ public class RenderManager implements IRenderManager {
+             this.playerViewX = livingPlayerIn.prevRotationPitch + (livingPlayerIn.rotationPitch - livingPlayerIn.prevRotationPitch) * partialTicks;
+         }
+ 
+-        if (optionsIn.showDebugInfo == 2) {
++        if (optionsIn.perspective == 2) {
+             this.playerViewY += 180.0F;
+         }
+ 
+@@ -294,6 +294,7 @@ public class RenderManager implements IRenderManager {
+ 
+     public boolean doRenderEntity(Entity entity, double x, double y, double z, float entityYaw, float partialTicks, boolean hideDebugBox) {
+         Render<Entity> render = null;
++
+         if (
+                 !JClient.EVENT_BUS.invokeEvent(new RenderEntityEvent.Pre(entity, x, y, z, entityYaw, partialTicks, hideDebugBox))) {
+             return true;
+@@ -337,7 +338,6 @@ public class RenderManager implements IRenderManager {
+             }
+ 
+             JClient.EVENT_BUS.invokeEvent(new RenderEntityEvent.Post(entity, x, y, z, entityYaw, partialTicks, hideDebugBox));
+-
+             return true;
+         } catch (Throwable throwable3) {
+             CrashReport crashreport = CrashReport.makeCrashReport(throwable3, "Rendering entity in world");
+@@ -350,6 +350,7 @@ public class RenderManager implements IRenderManager {
+             crashreportcategory1.addCrashSection("Delta", Float.valueOf(partialTicks));
+             throw new ReportedException(crashreport);
+         }
++
+     }
+ 
+     /**
+diff --git a/src/main/java/net/minecraft/util/MovementInputFromOptions.java b/src/main/java/net/minecraft/util/MovementInputFromOptions.java
+index 76bfcc9..319b6cc 100644
+--- a/src/main/java/net/minecraft/util/MovementInputFromOptions.java
++++ b/src/main/java/net/minecraft/util/MovementInputFromOptions.java
+@@ -16,8 +16,7 @@ public class MovementInputFromOptions extends MovementInput
+         this.moveStrafe = 0.0F;
+         this.moveForward = 0.0F;
+ 
+-        if (this.gameSettings.keyBindForward2.isKeyDown())
+-        {
++        if (this.gameSettings.keyBindForward.isKeyDown()) {
+             ++this.moveForward;
+         }
+ 
+diff --git a/src/main/java/net/optifine/shaders/Shaders.java b/src/main/java/net/optifine/shaders/Shaders.java
+index c34cdc3..488fdab 100644
+--- a/src/main/java/net/optifine/shaders/Shaders.java
++++ b/src/main/java/net/optifine/shaders/Shaders.java
+@@ -3479,7 +3479,7 @@ public class Shaders
+                 setProgramUniform1f(uniform_nightVision, nightVision);
+                 setProgramUniform1f(uniform_blindness, blindness);
+                 setProgramUniform1f(uniform_screenBrightness, mc.gameSettings.gamma);
+-                setProgramUniform1i(uniform_hideGUI, mc.gameSettings.thirdPersonView ? 1 : 0);
++                setProgramUniform1i(uniform_hideGUI, mc.gameSettings.hideGUI ? 1 : 0);
+                 setProgramUniform1f(uniform_centerDepthSmooth, centerDepthSmooth);
+                 setProgramUniform2i(uniform_atlasSize, atlasSizeX, atlasSizeY);
+ 
+@@ -4509,7 +4509,7 @@ public class Shaders
+         setProgramUniformMatrix4ARB(uniform_shadowProjectionInverse, false, shadowProjectionInverse);
+         setProgramUniformMatrix4ARB(uniform_shadowModelView, false, shadowModelView);
+         setProgramUniformMatrix4ARB(uniform_shadowModelViewInverse, false, shadowModelViewInverse);
+-        mc.gameSettings.showDebugInfo = 1;
++        mc.gameSettings.perspective = 1;
+         checkGLError("setCamera");
+     }
+ 
+diff --git a/src/main/java/net/optifine/shaders/ShadersRender.java b/src/main/java/net/optifine/shaders/ShadersRender.java
+index a70bcf7..7e47c52 100644
+--- a/src/main/java/net/optifine/shaders/ShadersRender.java
++++ b/src/main/java/net/optifine/shaders/ShadersRender.java
+@@ -203,8 +203,8 @@ public class ShadersRender
+             RenderGlobal renderglobal = minecraft.renderGlobal;
+             Shaders.isShadowPass = true;
+             Shaders.shadowPassCounter = Shaders.shadowPassInterval;
+-            Shaders.preShadowPassThirdPersonView = minecraft.gameSettings.showDebugInfo;
+-            minecraft.gameSettings.showDebugInfo = 1;
++            Shaders.preShadowPassThirdPersonView = minecraft.gameSettings.perspective;
++            minecraft.gameSettings.perspective = 1;
+             Shaders.checkGLError("pre shadow");
+             GL11.glMatrixMode(GL11.GL_PROJECTION);
+             GL11.glPushMatrix();
+@@ -333,7 +333,7 @@ public class ShadersRender
+             GL11.glFlush();
+             Shaders.checkGLError("shadow flush");
+             Shaders.isShadowPass = false;
+-            minecraft.gameSettings.showDebugInfo = Shaders.preShadowPassThirdPersonView;
++            minecraft.gameSettings.perspective = Shaders.preShadowPassThirdPersonView;
+             minecraft.mcProfiler.endStartSection("shadow postprocess");
+ 
+             if (Shaders.hasGlGenMipmap)
+-- 
+2.34.1
+

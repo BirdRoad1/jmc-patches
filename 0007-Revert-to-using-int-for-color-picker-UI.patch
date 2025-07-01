@@ -1,0 +1,75 @@
+From 0e37f7583c37a968217feba0ae371cc5e5f03340 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Tue, 24 Jun 2025 09:45:23 -0400
+Subject: [PATCH 07/60] Revert to using int for color picker UI
+
+---
+ .../component/impl/ColorPickerComponent.java  | 20 +++++++++----------
+ src/main/java/com/jlmsz/util/GuiUtil.java     |  1 +
+ 2 files changed, 11 insertions(+), 10 deletions(-)
+
+diff --git a/src/main/java/com/jlmsz/gui/component/impl/ColorPickerComponent.java b/src/main/java/com/jlmsz/gui/component/impl/ColorPickerComponent.java
+index a329eab..0321462 100644
+--- a/src/main/java/com/jlmsz/gui/component/impl/ColorPickerComponent.java
++++ b/src/main/java/com/jlmsz/gui/component/impl/ColorPickerComponent.java
+@@ -55,10 +55,10 @@ public class ColorPickerComponent extends Gui implements IComponent {
+     private int sliderQuadSizeLoc;
+ 
+     // Coordinates relative to component position
+-    private float cursorX;
+-    private float cursorY;
++    private int cursorX;
++    private int cursorY;
+ 
+-    private float hueY;
++    private int hueY;
+ 
+     private boolean clickedBox;
+     private boolean clickedSlider;
+@@ -229,24 +229,24 @@ public class ColorPickerComponent extends Gui implements IComponent {
+ 
+     private void renderCursor(int mouseX, int mouseY) {
+         if (clickedBox) {
+-            cursorX = MathHelper.clamp_float(mouseX - x, 0, boxWidth);
+-            cursorY = MathHelper.clamp_float(mouseY - y, 0, height);
++            cursorX = MathHelper.clamp_int(mouseX - x, 0, boxWidth);
++            cursorY = MathHelper.clamp_int(mouseY - y, 0, height);
+             updateColor();
+         }
+ 
+-        GuiUtil.drawRect(x + cursorX - 5, y + cursorY - 5, x + cursorX + 5, y + cursorY + 5, 0xFF000000);
+-        GuiUtil.drawRect(x + cursorX - 3, y + cursorY - 3, x + cursorX + 3, y + cursorY + 3, 0xFFFFFFFF);
++        GuiUtil.drawUnscaledRect(x + cursorX - 5, y + cursorY - 5, x + cursorX + 5, y + cursorY + 5, 0xFF000000);
++        GuiUtil.drawUnscaledRect(x + cursorX - 3, y + cursorY - 3, x + cursorX + 3, y + cursorY + 3, 0xFFFFFFFF);
+     }
+ 
+     private void renderHueSlider(int mouseX, int mouseY) {
+         if (clickedSlider) {
+-            hueY = MathHelper.clamp_float(mouseY - y, 0, height);
++            hueY = MathHelper.clamp_int(mouseY - y, 0, height);
+             updateColor();
+         }
+ 
+-        GuiUtil.drawRect(x + 200 + 5 - 3, y + hueY - 5 - 3, x + 200 + 8 + sliderWidth + 3, y + hueY + 5 + 3, 0xFF000000);
++        GuiUtil.drawUnscaledRect(x + 200 + 5 - 3, y + hueY - 5 - 3, x + 200 + 8 + sliderWidth + 3, y + hueY + 5 + 3, 0xFF000000);
+ 
+-        GuiUtil.drawRect(x + 200 + 5, y + hueY - 5, x + 200 + 5 + sliderWidth, y + hueY + 5, 0xFFFFFFFF);
++        GuiUtil.drawUnscaledRect(x + 200 + 5, y + hueY - 5, x + 200 + 5 + sliderWidth, y + hueY + 5, 0xFFFFFFFF);
+     }
+ 
+     @Override
+diff --git a/src/main/java/com/jlmsz/util/GuiUtil.java b/src/main/java/com/jlmsz/util/GuiUtil.java
+index b0518c8..272b770 100644
+--- a/src/main/java/com/jlmsz/util/GuiUtil.java
++++ b/src/main/java/com/jlmsz/util/GuiUtil.java
+@@ -17,6 +17,7 @@ import java.nio.FloatBuffer;
+ import java.nio.IntBuffer;
+ 
+ public class GuiUtil {
++
+     public static void drawUnscaledRect(int left, int top, int right, int bottom, int color) {
+ //        ScaledResolution sr = new ScaledResolution(Minecraft.getMinecraft());
+ //        float scale = 1F / sr.getScaleFactor();
+-- 
+2.34.1
+

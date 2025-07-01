@@ -1,0 +1,33 @@
+From d52c8f19c888eaaf2e1b2e9476a88d78ada6bc34 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sat, 28 Jun 2025 09:41:14 -0400
+Subject: [PATCH 23/60] Add scoreboard null checks to reduce vanilla exceptions
+
+---
+ src/main/java/net/minecraft/scoreboard/Scoreboard.java | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/main/java/net/minecraft/scoreboard/Scoreboard.java b/src/main/java/net/minecraft/scoreboard/Scoreboard.java
+index 4d7c828..3d5db9a 100644
+--- a/src/main/java/net/minecraft/scoreboard/Scoreboard.java
++++ b/src/main/java/net/minecraft/scoreboard/Scoreboard.java
+@@ -215,6 +215,8 @@ public class Scoreboard
+ 
+     public void removeObjective(ScoreObjective p_96519_1_)
+     {
++        if (p_96519_1_ == null) return;
++
+         this.scoreObjectives.remove(p_96519_1_.getName());
+ 
+         for (int i = 0; i < 19; ++i)
+@@ -293,6 +295,7 @@ public class Scoreboard
+      */
+     public void removeTeam(ScorePlayerTeam p_96511_1_)
+     {
++        if (p_96511_1_ == null) return;
+         this.teams.remove(p_96511_1_.getRegisteredName());
+ 
+         for (String s : p_96511_1_.getMembershipCollection())
+-- 
+2.34.1
+

@@ -1,0 +1,72 @@
+From 638a715d737c01c4b30be8f77ef63ef6731bec07 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Mon, 30 Jun 2025 13:08:27 -0400
+Subject: [PATCH 55/60] Add events
+
+---
+ .../jlmsz/event/impl/OrientCameraEvent.java   | 15 ++++++++++++++
+ .../com/jlmsz/event/impl/RenderEvent.java     | 20 +++++++++++++++++++
+ 2 files changed, 35 insertions(+)
+ create mode 100644 src/main/java/com/jlmsz/event/impl/OrientCameraEvent.java
+
+diff --git a/src/main/java/com/jlmsz/event/impl/OrientCameraEvent.java b/src/main/java/com/jlmsz/event/impl/OrientCameraEvent.java
+new file mode 100644
+index 0000000..8e905fc
+--- /dev/null
++++ b/src/main/java/com/jlmsz/event/impl/OrientCameraEvent.java
+@@ -0,0 +1,15 @@
++package com.jlmsz.event.impl;
++
++import com.jlmsz.event.Event;
++
++public class OrientCameraEvent {
++
++    public static class Post extends Event {
++
++    }
++
++    public static class Pre extends Event {
++
++    }
++
++}
+diff --git a/src/main/java/com/jlmsz/event/impl/RenderEvent.java b/src/main/java/com/jlmsz/event/impl/RenderEvent.java
+index 442a48c..5c5f053 100644
+--- a/src/main/java/com/jlmsz/event/impl/RenderEvent.java
++++ b/src/main/java/com/jlmsz/event/impl/RenderEvent.java
+@@ -4,7 +4,15 @@ import com.jlmsz.event.Event;
+ 
+ public class RenderEvent {
+     public static class Pre extends Event {
++        private final float partialTicks;
+ 
++        public Pre(float partialTicks) {
++            this.partialTicks = partialTicks;
++        }
++
++        public float getPartialTicks() {
++            return partialTicks;
++        }
+     }
+ 
+     public static class Post extends Event {
+@@ -18,4 +26,16 @@ public class RenderEvent {
+             return partialTicks;
+         }
+     }
++
++    public static class PostPost extends Event {
++        private final float partialTicks;
++
++        public PostPost(float partialTicks) {
++            this.partialTicks = partialTicks;
++        }
++
++        public float getPartialTicks() {
++            return partialTicks;
++        }
++    }
+ }
+-- 
+2.34.1
+

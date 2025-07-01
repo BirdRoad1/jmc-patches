@@ -1,0 +1,31 @@
+From 3368b09cd9be2c90be5f5887f0a2e4112ec305bd Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sun, 29 Jun 2025 03:00:45 -0400
+Subject: [PATCH 30/60] big fix: remove unecessary scaling code
+
+---
+ src/main/java/com/jlmsz/gui/settings/SettingsButton.java | 8 +-------
+ 1 file changed, 1 insertion(+), 7 deletions(-)
+
+diff --git a/src/main/java/com/jlmsz/gui/settings/SettingsButton.java b/src/main/java/com/jlmsz/gui/settings/SettingsButton.java
+index 23fe40d..2c3dbb6 100644
+--- a/src/main/java/com/jlmsz/gui/settings/SettingsButton.java
++++ b/src/main/java/com/jlmsz/gui/settings/SettingsButton.java
+@@ -23,13 +23,7 @@ public class SettingsButton extends GuiButton {
+ 
+     @Override
+     public void drawButton(Minecraft mc, int mouseX, int mouseY) {
+-        ScaledResolution sr = new ScaledResolution(mc);
+-        int scaleFactor = sr.getScaleFactor();
+-//
+-        int realMouseX = mouseX * scaleFactor;
+-        int realMouseY = mouseY * scaleFactor;
+-
+-        this.hovered = realMouseX >= this.xPosition && realMouseY >= this.yPosition && realMouseX < this.xPosition + this.width && realMouseY < this.yPosition + this.height;
++        this.hovered = mouseX >= this.xPosition && mouseY >= this.yPosition && mouseX < this.xPosition + this.width && mouseY < this.yPosition + this.height;
+ //
+         int bgColor = hovered ? hoverColor : color;
+ //
+-- 
+2.34.1
+

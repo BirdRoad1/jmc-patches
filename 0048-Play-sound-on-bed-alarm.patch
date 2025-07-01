@@ -1,0 +1,26 @@
+From aacc7eab878e0e2dcbd617ac190a3db420c9e7a0 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Mon, 30 Jun 2025 13:02:59 -0400
+Subject: [PATCH 48/60] Play sound on bed alarm
+
+---
+ src/main/java/com/jlmsz/module/impl/BedAlarmModule.java | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/main/java/com/jlmsz/module/impl/BedAlarmModule.java b/src/main/java/com/jlmsz/module/impl/BedAlarmModule.java
+index 8ca10b4..ab0f5ab 100644
+--- a/src/main/java/com/jlmsz/module/impl/BedAlarmModule.java
++++ b/src/main/java/com/jlmsz/module/impl/BedAlarmModule.java
+@@ -124,6 +124,9 @@ public class BedAlarmModule extends Module {
+             boolean sameTeam = myTeam != null && stripped.equals(myTeam.getRegisteredName().replaceAll("\\d", ""));
+             if (!sameTeam && mc.theWorld.getBlockState(bedBlock).getBlock() == Blocks.bed && Util.horizontalDistance(plrX, plrZ, bedX, bedZ) <= distanceSetting.getValue()) {
+                 mc.ingameGUI.getChatGUI().printChatMessage(new ChatComponentText("[BedAlarm] An enemy " + plr.getName() + " from team " + stripped + " is near your bed!"));
++                if (mc.theWorld != null && mc.thePlayer != null) {
++                    mc.theWorld.playSound(mc.thePlayer.posX, mc.thePlayer.posY, mc.thePlayer.posZ, "mob.enderdragon.growl", 1, 1.5f, false);
++                }
+                 cooldownMap.put(plrUUID, (int) (System.currentTimeMillis() / 1000) + cooldownSetting.getValue());
+             }
+         }
+-- 
+2.34.1
+

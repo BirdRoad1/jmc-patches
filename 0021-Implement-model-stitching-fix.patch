@@ -1,0 +1,86 @@
+From 7bc3949dbe6fab7f268f2f5129a06e8ee395d274 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sat, 28 Jun 2025 09:40:49 -0400
+Subject: [PATCH 21/60] Implement model stitching fix
+
+---
+ src/main/java/com/jlmsz/fixes/ModelFix.java | 67 +++++++++++++++++++++
+ 1 file changed, 67 insertions(+)
+ create mode 100644 src/main/java/com/jlmsz/fixes/ModelFix.java
+
+diff --git a/src/main/java/com/jlmsz/fixes/ModelFix.java b/src/main/java/com/jlmsz/fixes/ModelFix.java
+new file mode 100644
+index 0000000..72a07e9
+--- /dev/null
++++ b/src/main/java/com/jlmsz/fixes/ModelFix.java
+@@ -0,0 +1,67 @@
++package com.jlmsz.fixes;
++
++import net.minecraft.client.renderer.block.model.BlockPart;
++import net.minecraft.client.renderer.block.model.ItemModelGenerator;
++import net.minecraft.util.EnumFacing;
++import org.lwjgl.util.vector.Vector3f;
++
++import java.util.Iterator;
++import java.util.List;
++import java.util.Set;
++
++public class ModelFix {
++
++    public static void expandSpan(List<ItemModelGenerator.Span> listSpans, ItemModelGenerator.SpanFacing spanFacing,
++            int pixelX, int pixelY) {
++        int length;
++        ItemModelGenerator.Span existingSpan = null;
++        for (ItemModelGenerator.Span otherSpan : listSpans) {
++            if (otherSpan.getFacing() == spanFacing) {
++                int i = spanFacing.isHorizontal() ? pixelY : pixelX;
++                int j = !spanFacing.isHorizontal() ? pixelY : pixelX;
++
++                if (otherSpan.getAnchor() != i || otherSpan.getMax() != j - 1)
++                    continue;
++                existingSpan = otherSpan;
++                break;
++            }
++        }
++
++        length = spanFacing.isHorizontal() ? pixelX : pixelY;
++        if (existingSpan == null) {
++            int newStart = spanFacing.isHorizontal() ? pixelY : pixelX;
++            listSpans.add(new ItemModelGenerator.Span(spanFacing, length, newStart));
++        } else {
++            existingSpan.expand(length);
++        }
++    }
++
++    public static void enlargeFaces(List<BlockPart> parts) {
++        float shrink = 0.007f;
++        float expansion = 0.008f;
++        Iterator<BlockPart> var3 = parts.iterator();
++
++        while (var3.hasNext()) {
++            BlockPart e = var3.next();
++            Vector3f from = e.positionFrom;
++            Vector3f to = e.positionTo;
++            Set<EnumFacing> set = e.mapFaces.keySet();
++            if (set.size() == 1) {
++                EnumFacing direction = set.stream().findAny().get();
++                if (direction == EnumFacing.UP) {
++                    from.set(from.x - expansion, from.y - shrink, from.z - expansion);
++                    to.set(to.x + expansion, to.y - shrink, to.z + expansion);
++                } else if (direction == EnumFacing.DOWN) {
++                    from.set(from.x - expansion, from.y + shrink, from.z - expansion);
++                    to.set(to.x + expansion, to.y + shrink, to.z + expansion);
++                } else if (direction == EnumFacing.WEST) {
++                    from.set(from.x - shrink, from.y + expansion, from.z - expansion);
++                    to.set(to.x - shrink, to.y - expansion, to.z + expansion);
++                } else if (direction == EnumFacing.EAST) {
++                    from.set(from.x + shrink, from.y + expansion, from.z - expansion);
++                    to.set(to.x + shrink, to.y - expansion, to.z + expansion);
++                }
++            }
++        }
++    }
++}
+-- 
+2.34.1
+

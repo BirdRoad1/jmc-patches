@@ -1,0 +1,336 @@
+From 5afccaaa9cdf1d20d24786cfb67b2eb76709d809 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Tue, 24 Jun 2025 10:01:51 -0400
+Subject: [PATCH 11/60] Code cleanup
+
+---
+ .../component/impl/ColorPickerComponent.java  |  4 +--
+ .../gui/component/impl/SliderComponent.java   |  1 -
+ .../com/jlmsz/gui/settings/SettingsGui.java   | 19 ------------
+ .../settings/panel/ConfigureModulePanel.java  | 31 +------------------
+ .../gui/settings/panel/SettingsPanel.java     |  1 -
+ .../java/com/jlmsz/module/ModuleRegistry.java |  4 +--
+ .../jlmsz/module/impl/CrosshairModule.java    | 15 +--------
+ src/main/java/com/jlmsz/util/GuiUtil.java     | 25 ---------------
+ 8 files changed, 6 insertions(+), 94 deletions(-)
+
+diff --git a/src/main/java/com/jlmsz/gui/component/impl/ColorPickerComponent.java b/src/main/java/com/jlmsz/gui/component/impl/ColorPickerComponent.java
+index 0321462..76eb4c0 100644
+--- a/src/main/java/com/jlmsz/gui/component/impl/ColorPickerComponent.java
++++ b/src/main/java/com/jlmsz/gui/component/impl/ColorPickerComponent.java
+@@ -191,7 +191,7 @@ public class ColorPickerComponent extends Gui implements IComponent {
+         // Set uniforms
+         GL20.glUniform2f(boxQuadOffsetLoc, x, mc.displayHeight - y - height);
+         GL20.glUniform2f(boxQuadSizeLoc, boxWidth, height); // <-- THIS IS CRUCIAL
+-        GL20.glUniform1f(boxHueLoc, hueY / height);
++        GL20.glUniform1f(boxHueLoc, (float) hueY / height);
+         GL20.glUniform2f(boxScreenSizeLoc, mc.displayWidth, mc.displayHeight);
+ 
+         GL11.glDrawArrays(GL11.GL_TRIANGLE_STRIP, 0, 4);
+@@ -218,7 +218,7 @@ public class ColorPickerComponent extends Gui implements IComponent {
+     }
+ 
+     private void updateColor() {
+-        ARGBColor color = ColorUtil.hsvToRgb(new Vector3f(hueY / height, cursorX / boxWidth, 1-(cursorY / height)));
++        ARGBColor color = ColorUtil.hsvToRgb(new Vector3f((float) hueY / height, (float) cursorX / boxWidth, 1f - (float) cursorY / height));
+         setting.setValue(color);
+     }
+ 
+diff --git a/src/main/java/com/jlmsz/gui/component/impl/SliderComponent.java b/src/main/java/com/jlmsz/gui/component/impl/SliderComponent.java
+index 7cfbccd..add866f 100644
+--- a/src/main/java/com/jlmsz/gui/component/impl/SliderComponent.java
++++ b/src/main/java/com/jlmsz/gui/component/impl/SliderComponent.java
+@@ -40,7 +40,6 @@ public class SliderComponent extends Gui implements IComponent {
+ 
+     public void renderComponent(int mouseX, int mouseY) {
+         double offset = max == min ? 0 : ((value - min) / (max - min)) * width;
+-        System.out.println(value);
+         GuiUtil.drawUnscaledString(mc.fontRendererObj, String.format("%.2f", value), x, y - mc.fontRendererObj.FONT_HEIGHT / 4, 0xFFFFFFFF, 2f);
+ 
+         GuiUtil.drawUnscaledRect(sliderX, y, sliderX + width, y + height, 0xFFFFFFFF);
+diff --git a/src/main/java/com/jlmsz/gui/settings/SettingsGui.java b/src/main/java/com/jlmsz/gui/settings/SettingsGui.java
+index e1d3d91..5e240fd 100644
+--- a/src/main/java/com/jlmsz/gui/settings/SettingsGui.java
++++ b/src/main/java/com/jlmsz/gui/settings/SettingsGui.java
+@@ -6,11 +6,9 @@ import com.jlmsz.gui.settings.panel.ModulesPanel;
+ import com.jlmsz.gui.settings.panel.SettingsPanel;
+ import com.jlmsz.gui.settings.panel.factory.PanelFactory;
+ import com.jlmsz.util.GuiUtil;
+-import net.minecraft.client.gui.Gui;
+ import net.minecraft.client.gui.GuiButton;
+ import net.minecraft.client.gui.GuiScreen;
+ import net.minecraft.client.gui.ScaledResolution;
+-import net.minecraft.client.renderer.GlStateManager;
+ 
+ import java.io.IOException;
+ 
+@@ -75,24 +73,7 @@ public class SettingsGui extends GuiScreen implements IPanelSwitcher {
+             activePanel.renderPanel(mouseX, mouseY);
+         }
+ 
+-//        ScaledResolution sr = new ScaledResolution(mc);
+-
+-//        GlStateManager.pushMatrix();
+-//        GlStateManager.viewport(0, 0, mc.displayWidth, mc.displayHeight);
+-//        GlStateManager.ortho(0.0D, mc.displayWidth, mc.displayHeight, 0.0D, 1000.0D, 3000.0D);
+-//        GlStateManager.matrixMode(5888);
+-
+-
+-//        GuiUtil.dumpGl();
+-//        GlStateManager.loadIdentity();
+-//        GlStateManager.translate(0, 0, -2000f);
+-//        GuiUtil.dumpGl();
+-
+         GuiUtil.setupScaledOverlayRendering(mc);
+-//        GlStateManager.ortho(0.0D, (double) sr.getScaledWidth(), (double) sr.getScaledHeight(), 0.0D, 1000.0D, 3000.0D);
+-//        GlStateManager.popMatrix();
+-
+-//        mc.displayGuiScreen(null);
+     }
+ 
+     @Override
+diff --git a/src/main/java/com/jlmsz/gui/settings/panel/ConfigureModulePanel.java b/src/main/java/com/jlmsz/gui/settings/panel/ConfigureModulePanel.java
+index 13ce879..9193edb 100644
+--- a/src/main/java/com/jlmsz/gui/settings/panel/ConfigureModulePanel.java
++++ b/src/main/java/com/jlmsz/gui/settings/panel/ConfigureModulePanel.java
+@@ -6,18 +6,14 @@ import com.jlmsz.module.Module;
+ import com.jlmsz.module.config.*;
+ import com.jlmsz.module.impl.CrosshairModule;
+ import com.jlmsz.util.GuiUtil;
+-import org.lwjgl.Sys;
+ 
+ import java.io.IOException;
+ import java.util.ArrayList;
+-import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
+ 
+ public class ConfigureModulePanel extends ScrollablePanel {
+     private final Module module;
+-    //    private final List<IComponent> components = new ArrayList<>();
+-//    private final HashMap<ModuleSetting<?>, IComponent> components = new HashMap<>();
+     List<ComponentSettingPair> components = new ArrayList<>();
+ 
+     public ConfigureModulePanel(Module module, int x, int y, int width, int height) {
+@@ -47,20 +43,15 @@ public class ConfigureModulePanel extends ScrollablePanel {
+                 elemBeingAdded = new ComponentSettingPair(name, component, setting);
+ 
+             } else if (setting instanceof IntModuleSetting) {
+-//                GuiUtil.drawUnscaledString(mc.fontRendererObj, setting.getKey(), x + 20, settingY, 0xFFFFFFFF, 1);
++                // TODO: handle IntModuleSetting
+             } else if (setting instanceof DoubleModuleSetting) {
+                 DoubleModuleSetting doubleSetting = (DoubleModuleSetting) setting;
+                 SliderComponent component = new SliderComponent(componentX, componentY, 320, 12, doubleSetting.getMin(), doubleSetting.getMax(), doubleSetting.getStep(), doubleSetting.getValue());
+                 component.onValueChange(doubleSetting::setValue);
+                 elemBeingAdded = new ComponentSettingPair(name, component, setting);
+-//                componentY += mc.fontRendererObj.FONT_HEIGHT * 2 + 20;
+             } else if (setting instanceof BooleanModuleSetting) {
+                 BooleanModuleSetting boolSetting = (BooleanModuleSetting) setting;
+                 elemBeingAdded = new ComponentSettingPair(name, new CheckboxComponent(boolSetting, componentX, componentY), setting);
+-//                componentY += mc.fontRendererObj.FONT_HEIGHT * 2 + 20;
+-
+-//                GuiUtil.drawUnscaledString(mc.fontRendererObj, setting.getKey(), x + 20, settingY, 0xFFFFFFFF, 1);
+-
+             } else if (setting instanceof ColorModuleSetting) {
+                 ColorModuleSetting colorSetting = (ColorModuleSetting) setting;
+                 elemBeingAdded = new ComponentSettingPair(name, new ColorPickerComponent(colorSetting, componentX, componentY), setting);
+@@ -79,15 +70,9 @@ public class ConfigureModulePanel extends ScrollablePanel {
+         Map<String, ModuleSetting<?>> settings = module.getSettings();
+         int settingY = y + 20 - scrollY + 40;
+ 
+-//        for (IComponent component : unnamedComponents) {
+-//            component.renderComponent(mouseX, mouseY);
+-//            settingY += component.getHeight() + 20;
+-//        }
+-
+         for (ComponentSettingPair elem : components) {
+             String name = elem.name;
+             IComponent component = elem.component;
+-            ModuleSetting<?> setting = elem.setting;
+ 
+             if (name != null) {
+                 GuiUtil.drawUnscaledString(mc.fontRendererObj, name, x + 20, settingY, 0xFFFFFFFF, 2);
+@@ -95,21 +80,7 @@ public class ConfigureModulePanel extends ScrollablePanel {
+ 
+             component.renderComponent(mouseX, mouseY);
+             settingY += component.getHeight() + 20;
+-
+-//            GuiUtil.drawUnscaledRect(x, settingY, x + 1000, settingY + 1, 0xFFFF0000);
+-//            if (value instanceof Integer) {
+-//                GuiUtil.drawUnscaledString(mc.fontRendererObj, setting.getKey(), x + 20, settingY, 0xFFFFFFFF, 2);
+-//            } else if (value instanceof Double) {
+-//                GuiUtil.drawUnscaledString(mc.fontRendererObj, setting.getKey(), x + 20, settingY - mc.fontRendererObj.FONT_HEIGHT / 4, 0xFFFFFFFF, 2);
+-//
+-//            } else if (value instanceof Boolean) {
+-//                GuiUtil.drawUnscaledString(mc.fontRendererObj, setting.getKey(), x + 20, settingY, 0xFFFFFFFF, 2);
+-//            }
+-//            settingY += mc.fontRendererObj.FONT_HEIGHT * 2 + 20 - mc.fontRendererObj.FONT_HEIGHT / 2;
+         }
+-
+-//        for (IComponent component : components) {
+-//        }
+     }
+ 
+     @Override
+diff --git a/src/main/java/com/jlmsz/gui/settings/panel/SettingsPanel.java b/src/main/java/com/jlmsz/gui/settings/panel/SettingsPanel.java
+index 4b31ae0..d969a19 100644
+--- a/src/main/java/com/jlmsz/gui/settings/panel/SettingsPanel.java
++++ b/src/main/java/com/jlmsz/gui/settings/panel/SettingsPanel.java
+@@ -2,7 +2,6 @@ package com.jlmsz.gui.settings.panel;
+ 
+ import net.minecraft.client.Minecraft;
+ import net.minecraft.client.gui.Gui;
+-import net.minecraft.client.gui.GuiButton;
+ 
+ import java.io.IOException;
+ 
+diff --git a/src/main/java/com/jlmsz/module/ModuleRegistry.java b/src/main/java/com/jlmsz/module/ModuleRegistry.java
+index 0c3337f..2f7d94c 100644
+--- a/src/main/java/com/jlmsz/module/ModuleRegistry.java
++++ b/src/main/java/com/jlmsz/module/ModuleRegistry.java
+@@ -1,13 +1,12 @@
+ package com.jlmsz.module;
+ 
++import com.jlmsz.module.impl.CrosshairModule;
+ import com.jlmsz.module.impl.SprintModule;
+ 
+ import java.util.ArrayList;
+ import java.util.Arrays;
+ import java.util.List;
+ 
+-import com.jlmsz.module.impl.CrosshairModule;
+-
+ public class ModuleRegistry {
+ 
+     private static List<Module> moduleList;
+@@ -29,6 +28,7 @@ public class ModuleRegistry {
+     /**
+      * Returns a copy of the module list.
+      * The returned list can be safely modified.
++     *
+      * @return A new list of modules
+      */
+     public static List<Module> getModuleList() {
+diff --git a/src/main/java/com/jlmsz/module/impl/CrosshairModule.java b/src/main/java/com/jlmsz/module/impl/CrosshairModule.java
+index cfd424e..02f2d26 100644
+--- a/src/main/java/com/jlmsz/module/impl/CrosshairModule.java
++++ b/src/main/java/com/jlmsz/module/impl/CrosshairModule.java
+@@ -9,28 +9,18 @@ import com.jlmsz.module.config.BooleanModuleSetting;
+ import com.jlmsz.module.config.ColorModuleSetting;
+ import com.jlmsz.module.config.CrosshairModuleSetting;
+ import com.jlmsz.module.config.DoubleModuleSetting;
+-import com.jlmsz.util.GuiUtil;
+ import com.jlmsz.util.color.ARGBColor;
+-import jdk.internal.util.xml.impl.Input;
+ import net.minecraft.client.gui.GuiIngame;
+ import net.minecraft.client.gui.ScaledResolution;
+ import net.minecraft.client.renderer.GlStateManager;
+ import net.minecraft.util.ResourceLocation;
+-import org.lwjgl.opengl.GL11;
+-import org.lwjgl.opengl.GL20;
+ 
+-import java.io.BufferedReader;
+-import java.io.IOException;
+-import java.io.InputStream;
+-import java.io.InputStreamReader;
+ import java.util.ArrayList;
+ import java.util.List;
+ 
+ public class CrosshairModule extends Module {
+     public static final ResourceLocation crosshairs = new ResourceLocation("jclient", "textures/gui/crosshairs.png");
+-    private static final ResourceLocation debug = new ResourceLocation("jclient", "textures/gui/debug.png");
+     public static final List<CrosshairOffset> crosshairOffsets = new ArrayList<>();
+-    //    private int selectedCrosshair = 1;
+     public final DoubleModuleSetting crosshairScale = new DoubleModuleSetting(1D, 0.05, 5, 0.05);
+     public final CrosshairModuleSetting crosshair;
+     public final BooleanModuleSetting alphaEffect;
+@@ -63,9 +53,6 @@ public class CrosshairModule extends Module {
+         event.setCancelled(true);
+         ScaledResolution sr = new ScaledResolution(mc);
+         this.mc.getTextureManager().bindTexture(crosshairs);
+-//        GlStateManager.enableBlend();
+-
+-//        GlStateManager.enableAlpha();
+ 
+         CrosshairOffset offset = crosshairOffsets.get(crosshair.getValue());
+ 
+@@ -77,7 +64,7 @@ public class CrosshairModule extends Module {
+             GlStateManager.tryBlendFuncSeparate(775, 769, 1, 0);
+             GlStateManager.enableAlpha();
+         }
+-//        GlStateManager.color(1f, 1f, 1f);
++
+         ARGBColor argbColor = color.getValue();
+         GlStateManager.color(argbColor.r, argbColor.g, argbColor.b, 1f);
+         this.mc.ingameGUI.drawTexturedModalRect((int) ((sr.getScaledWidth() / 2D - 4 * scale) / scale), (int) ((sr.getScaledHeight() / 2D - 4 * scale) / scale), offset.x, offset.y, 9, 9);
+diff --git a/src/main/java/com/jlmsz/util/GuiUtil.java b/src/main/java/com/jlmsz/util/GuiUtil.java
+index 272b770..a951ad1 100644
+--- a/src/main/java/com/jlmsz/util/GuiUtil.java
++++ b/src/main/java/com/jlmsz/util/GuiUtil.java
+@@ -12,23 +12,13 @@ import org.lwjgl.BufferUtils;
+ import org.lwjgl.opengl.GL11;
+ import org.lwjgl.opengl.GL20;
+ 
+-import javax.vecmath.Vector2f;
+ import java.nio.FloatBuffer;
+ import java.nio.IntBuffer;
+ 
+ public class GuiUtil {
+ 
+     public static void drawUnscaledRect(int left, int top, int right, int bottom, int color) {
+-//        ScaledResolution sr = new ScaledResolution(Minecraft.getMinecraft());
+-//        float scale = 1F / sr.getScaleFactor();
+-//        GlStateManager.pushMatrix();
+-//        GlStateManager.scale(scale, scale, scale);
+         Gui.drawRect(left, top, right, bottom, color);
+-
+-//        Gui.drawRect((int) (left * scale), (int) (top * scale), (int) (right * scale), (int) (bottom * scale), color);
+-
+-//        GlStateManager.popMatrix();
+-
+     }
+ 
+     public static void drawCircle(double x, double y, int radius, int sides, int color) {
+@@ -57,15 +47,8 @@ public class GuiUtil {
+ 
+ 
+     public static void drawUnscaledString(FontRenderer fontRendererIn, String text, int x, int y, int color, float scale) {
+-        Minecraft mc = Minecraft.getMinecraft();
+-
+-        ScaledResolution sr = new ScaledResolution(mc);
+-//        float scaleFactor = (float) scale / sr.getScaleFactor();
+-
+         GlStateManager.pushMatrix();
+ 
+-//        GlStateManager.scale(scaleFactor, scaleFactor, scaleFactor);
+-
+         GlStateManager.scale(scale, scale, scale);
+ 
+         float scaledX = (float) x / scale;
+@@ -78,15 +61,8 @@ public class GuiUtil {
+     }
+ 
+     public static void drawUnscaledCenteredString(FontRenderer fontRendererIn, String text, int x, int y, int color, int scale) {
+-        Minecraft mc = Minecraft.getMinecraft();
+-
+-//        ScaledResolution sr = new ScaledResolution(mc);
+-//        float scaleFactor = (float) scale / sr.getScaleFactor();
+-
+         GlStateManager.pushMatrix();
+ 
+-//        GlStateManager.scale(scaleFactor, scaleFactor, scaleFactor);
+-
+         GlStateManager.scale(scale, scale, scale);
+         int width = fontRendererIn.getStringWidth(text) * scale;
+         int height = fontRendererIn.FONT_HEIGHT * scale;
+@@ -179,7 +155,6 @@ public class GuiUtil {
+     }
+ 
+     public static void setupUnscaledOverlayRendering(Minecraft mc) {
+-        ScaledResolution scaledresolution = new ScaledResolution(mc);
+         GlStateManager.clear(256);
+         GlStateManager.matrixMode(5889);
+         GlStateManager.loadIdentity();
+-- 
+2.34.1
+

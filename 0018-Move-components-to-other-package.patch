@@ -1,0 +1,75 @@
+From 543c5640054527a570473a44214526852ff046f3 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sat, 28 Jun 2025 09:34:44 -0400
+Subject: [PATCH 18/60] Move components to other package
+
+---
+ .../jlmsz/gui/component/{impl => }/ColorPickerComponent.java | 3 +--
+ .../impl => settings/components}/CrosshairComponent.java     | 2 +-
+ .../components}/CrosshairPreviewComponent.java               | 5 +----
+ 3 files changed, 3 insertions(+), 7 deletions(-)
+ rename src/main/java/com/jlmsz/gui/component/{impl => }/ColorPickerComponent.java (99%)
+ rename src/main/java/com/jlmsz/gui/{component/impl => settings/components}/CrosshairComponent.java (98%)
+ rename src/main/java/com/jlmsz/gui/{component/impl => settings/components}/CrosshairPreviewComponent.java (95%)
+
+diff --git a/src/main/java/com/jlmsz/gui/component/impl/ColorPickerComponent.java b/src/main/java/com/jlmsz/gui/component/ColorPickerComponent.java
+similarity index 99%
+rename from src/main/java/com/jlmsz/gui/component/impl/ColorPickerComponent.java
+rename to src/main/java/com/jlmsz/gui/component/ColorPickerComponent.java
+index bdf914b..e4b092b 100644
+--- a/src/main/java/com/jlmsz/gui/component/impl/ColorPickerComponent.java
++++ b/src/main/java/com/jlmsz/gui/component/ColorPickerComponent.java
+@@ -1,6 +1,5 @@
+-package com.jlmsz.gui.component.impl;
++package com.jlmsz.gui.component;
+ 
+-import com.jlmsz.gui.component.IComponent;
+ import com.jlmsz.module.config.ColorModuleSetting;
+ import com.jlmsz.module.impl.CrosshairModule;
+ import com.jlmsz.util.ColorUtil;
+diff --git a/src/main/java/com/jlmsz/gui/component/impl/CrosshairComponent.java b/src/main/java/com/jlmsz/gui/settings/components/CrosshairComponent.java
+similarity index 98%
+rename from src/main/java/com/jlmsz/gui/component/impl/CrosshairComponent.java
+rename to src/main/java/com/jlmsz/gui/settings/components/CrosshairComponent.java
+index 9e5ea4a..0964448 100644
+--- a/src/main/java/com/jlmsz/gui/component/impl/CrosshairComponent.java
++++ b/src/main/java/com/jlmsz/gui/settings/components/CrosshairComponent.java
+@@ -1,4 +1,4 @@
+-package com.jlmsz.gui.component.impl;
++package com.jlmsz.gui.settings.components;
+ 
+ import com.jlmsz.gui.component.IComponent;
+ import com.jlmsz.module.config.CrosshairModuleSetting;
+diff --git a/src/main/java/com/jlmsz/gui/component/impl/CrosshairPreviewComponent.java b/src/main/java/com/jlmsz/gui/settings/components/CrosshairPreviewComponent.java
+similarity index 95%
+rename from src/main/java/com/jlmsz/gui/component/impl/CrosshairPreviewComponent.java
+rename to src/main/java/com/jlmsz/gui/settings/components/CrosshairPreviewComponent.java
+index 3002697..ccc3462 100644
+--- a/src/main/java/com/jlmsz/gui/component/impl/CrosshairPreviewComponent.java
++++ b/src/main/java/com/jlmsz/gui/settings/components/CrosshairPreviewComponent.java
+@@ -1,4 +1,4 @@
+-package com.jlmsz.gui.component.impl;
++package com.jlmsz.gui.settings.components;
+ 
+ import com.jlmsz.gui.component.IComponent;
+ import com.jlmsz.module.config.CrosshairModuleSetting;
+@@ -36,7 +36,6 @@ public class CrosshairPreviewComponent extends Gui implements IComponent {
+         GlStateManager.color(1f, 1f, 1f);
+         GlStateManager.popMatrix();
+ 
+-//        GuiUtil.drawUnscaledRect(x, y, x + width, y + height, 0xFFFF0000);
+         DoubleModuleSetting scaleSetting = (DoubleModuleSetting) module.getSettings().get("Crosshair Scale");
+         CrosshairModuleSetting type = (CrosshairModuleSetting) module.getSettings().get("Crosshair Type");
+         double scale = scaleSetting.getValue();
+@@ -45,8 +44,6 @@ public class CrosshairPreviewComponent extends Gui implements IComponent {
+ 
+         CrosshairModule.CrosshairOffset offset = CrosshairModule.crosshairOffsets.get(type.getValue());
+         this.mc.getTextureManager().bindTexture(CrosshairModule.crosshairs);
+-//        GlStateManager.color(0, 0, 0);
+-
+ 
+         GlStateManager.pushMatrix();
+         GlStateManager.scale(scale, scale, 1D);
+-- 
+2.34.1
+

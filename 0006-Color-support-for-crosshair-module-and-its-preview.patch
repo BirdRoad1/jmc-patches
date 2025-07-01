@@ -1,0 +1,111 @@
+From 04d006050e083102563ddfd8021e298d08a33d67 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Tue, 24 Jun 2025 09:43:56 -0400
+Subject: [PATCH 06/60] Color support for crosshair module and its preview
+
+---
+ .../gui/component/impl/CrosshairPreviewComponent.java     | 7 +++++--
+ .../jlmsz/gui/settings/panel/ConfigureModulePanel.java    | 6 +++---
+ src/main/java/com/jlmsz/module/impl/CrosshairModule.java  | 8 +++++---
+ 3 files changed, 13 insertions(+), 8 deletions(-)
+
+diff --git a/src/main/java/com/jlmsz/gui/component/impl/CrosshairPreviewComponent.java b/src/main/java/com/jlmsz/gui/component/impl/CrosshairPreviewComponent.java
+index b1cce93..c5e476e 100644
+--- a/src/main/java/com/jlmsz/gui/component/impl/CrosshairPreviewComponent.java
++++ b/src/main/java/com/jlmsz/gui/component/impl/CrosshairPreviewComponent.java
+@@ -5,6 +5,7 @@ import com.jlmsz.module.config.CrosshairModuleSetting;
+ import com.jlmsz.module.config.DoubleModuleSetting;
+ import com.jlmsz.module.impl.CrosshairModule;
+ import com.jlmsz.util.GuiUtil;
++import com.jlmsz.util.color.ARGBColor;
+ import net.minecraft.client.Minecraft;
+ import net.minecraft.client.gui.Gui;
+ import net.minecraft.client.gui.ScaledResolution;
+@@ -12,6 +13,7 @@ import net.minecraft.client.renderer.GlStateManager;
+ import net.minecraft.client.renderer.Tessellator;
+ import net.minecraft.client.renderer.WorldRenderer;
+ import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
++import org.lwjgl.opengl.GL11;
+ 
+ public class CrosshairPreviewComponent extends Gui implements IComponent {
+     private final CrosshairModule module;
+@@ -58,9 +60,10 @@ public class CrosshairPreviewComponent extends Gui implements IComponent {
+             GlStateManager.tryBlendFuncSeparate(775, 769, 1, 0);
+             GlStateManager.enableBlend();
+         }
++        GlStateManager.alphaFunc(GL11.GL_GREATER, 0.0f);
+ 
+-        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+-
++        ARGBColor argbColor = module.color.getValue();
++        GlStateManager.color(argbColor.r, argbColor.g, argbColor.b, 1f);
+         this.mc.ingameGUI.drawTexturedModalRect((float) ((x + width / 2f - (9f * scale) / 2) / scale), (float) ((y + height / 2f - (9f * scale) / 2) / scale), offset.x, offset.y, 9, 9);
+ 
+         if (module.alphaEffect.getValue()) {
+diff --git a/src/main/java/com/jlmsz/gui/settings/panel/ConfigureModulePanel.java b/src/main/java/com/jlmsz/gui/settings/panel/ConfigureModulePanel.java
+index 54d329b..13ce879 100644
+--- a/src/main/java/com/jlmsz/gui/settings/panel/ConfigureModulePanel.java
++++ b/src/main/java/com/jlmsz/gui/settings/panel/ConfigureModulePanel.java
+@@ -50,7 +50,7 @@ public class ConfigureModulePanel extends ScrollablePanel {
+ //                GuiUtil.drawUnscaledString(mc.fontRendererObj, setting.getKey(), x + 20, settingY, 0xFFFFFFFF, 1);
+             } else if (setting instanceof DoubleModuleSetting) {
+                 DoubleModuleSetting doubleSetting = (DoubleModuleSetting) setting;
+-                SliderComponent component = new SliderComponent(componentX, componentY, 320, 12, doubleSetting.getMin(), doubleSetting.getMax(), doubleSetting.getValue());
++                SliderComponent component = new SliderComponent(componentX, componentY, 320, 12, doubleSetting.getMin(), doubleSetting.getMax(), doubleSetting.getStep(), doubleSetting.getValue());
+                 component.onValueChange(doubleSetting::setValue);
+                 elemBeingAdded = new ComponentSettingPair(name, component, setting);
+ //                componentY += mc.fontRendererObj.FONT_HEIGHT * 2 + 20;
+@@ -62,8 +62,8 @@ public class ConfigureModulePanel extends ScrollablePanel {
+ //                GuiUtil.drawUnscaledString(mc.fontRendererObj, setting.getKey(), x + 20, settingY, 0xFFFFFFFF, 1);
+ 
+             } else if (setting instanceof ColorModuleSetting) {
+-//                ColorModuleSetting colorSetting = (ColorModuleSetting) setting;
+-                elemBeingAdded = new ComponentSettingPair(name, new ColorPickerComponent(componentX, componentY), setting);
++                ColorModuleSetting colorSetting = (ColorModuleSetting) setting;
++                elemBeingAdded = new ComponentSettingPair(name, new ColorPickerComponent(colorSetting, componentX, componentY), setting);
+             }
+ 
+             if (elemBeingAdded != null) {
+diff --git a/src/main/java/com/jlmsz/module/impl/CrosshairModule.java b/src/main/java/com/jlmsz/module/impl/CrosshairModule.java
+index 0fb3772..cfd424e 100644
+--- a/src/main/java/com/jlmsz/module/impl/CrosshairModule.java
++++ b/src/main/java/com/jlmsz/module/impl/CrosshairModule.java
+@@ -10,6 +10,7 @@ import com.jlmsz.module.config.ColorModuleSetting;
+ import com.jlmsz.module.config.CrosshairModuleSetting;
+ import com.jlmsz.module.config.DoubleModuleSetting;
+ import com.jlmsz.util.GuiUtil;
++import com.jlmsz.util.color.ARGBColor;
+ import jdk.internal.util.xml.impl.Input;
+ import net.minecraft.client.gui.GuiIngame;
+ import net.minecraft.client.gui.ScaledResolution;
+@@ -30,7 +31,7 @@ public class CrosshairModule extends Module {
+     private static final ResourceLocation debug = new ResourceLocation("jclient", "textures/gui/debug.png");
+     public static final List<CrosshairOffset> crosshairOffsets = new ArrayList<>();
+     //    private int selectedCrosshair = 1;
+-    public final DoubleModuleSetting crosshairScale = new DoubleModuleSetting(1D, 0.01, 5);
++    public final DoubleModuleSetting crosshairScale = new DoubleModuleSetting(1D, 0.05, 5, 0.05);
+     public final CrosshairModuleSetting crosshair;
+     public final BooleanModuleSetting alphaEffect;
+     public final ColorModuleSetting color;
+@@ -53,7 +54,7 @@ public class CrosshairModule extends Module {
+         addSetting("Crosshair Scale", crosshairScale);
+         addSetting("Crosshair Type", crosshair = new CrosshairModuleSetting(0, crosshairOffsets.size()));
+         addSetting("Alpha Effect", alphaEffect = new BooleanModuleSetting(true));
+-        addSetting("Color", color = new ColorModuleSetting(new ColorModuleSetting.RGBColor(0, 0, 0)));
++        addSetting("Color", color = new ColorModuleSetting(new ARGBColor(1f, 0f, 0f, 0f)));
+     }
+ 
+     @EventHandler
+@@ -77,7 +78,8 @@ public class CrosshairModule extends Module {
+             GlStateManager.enableAlpha();
+         }
+ //        GlStateManager.color(1f, 1f, 1f);
+-
++        ARGBColor argbColor = color.getValue();
++        GlStateManager.color(argbColor.r, argbColor.g, argbColor.b, 1f);
+         this.mc.ingameGUI.drawTexturedModalRect((int) ((sr.getScaledWidth() / 2D - 4 * scale) / scale), (int) ((sr.getScaledHeight() / 2D - 4 * scale) / scale), offset.x, offset.y, 9, 9);
+         GlStateManager.color(1f, 1f, 1f);
+         GlStateManager.popMatrix();
+-- 
+2.34.1
+

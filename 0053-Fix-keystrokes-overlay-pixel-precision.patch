@@ -1,0 +1,133 @@
+From b20a68fa1f739d8eaa7aea83b0e18869de710d47 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Mon, 30 Jun 2025 13:08:02 -0400
+Subject: [PATCH 53/60] Fix keystrokes overlay pixel precision
+
+---
+ .../jlmsz/gui/overlay/KeystrokesOverlay.java  | 32 ++++++++++--------
+ .../jlmsz/module/impl/KeystrokesModule.java   |  7 ++--
+ src/main/java/com/jlmsz/util/GuiUtil.java     | 33 +++++++++++++++++++
+ 3 files changed, 56 insertions(+), 16 deletions(-)
+
+diff --git a/src/main/java/com/jlmsz/gui/overlay/KeystrokesOverlay.java b/src/main/java/com/jlmsz/gui/overlay/KeystrokesOverlay.java
+index 09b03cd..9e41939 100644
+--- a/src/main/java/com/jlmsz/gui/overlay/KeystrokesOverlay.java
++++ b/src/main/java/com/jlmsz/gui/overlay/KeystrokesOverlay.java
+@@ -15,31 +15,35 @@ public class KeystrokesOverlay extends Overlay {
+         this.buttonSize = buttonSize;
+     }
+ 
+-    public void drawBox(char letter, int key, int x, int y, int width, int height) {
+-        GuiUtil.drawUnscaledRect(x, y, x + width, y + height, 0x77333333);
+-        GuiUtil.drawUnscaledCenteredString(mc.fontRendererObj, Character.toString(letter), x + width / 2, y + width / 2, 0xFFFFFFFF, 1);
++    public void drawBox(char letter, KeyBinding key, double x, double y, double width, double height) {
++        if (key.isKeyDown()) {
++            GuiUtil.drawRect(x, y, x + width, y + height, 0xAA222222);
++        } else {
++            GuiUtil.drawRect(x, y, x + width, y + height, 0x77333333);
++        }
++        GuiUtil.drawUnscaledCenteredString(mc.fontRendererObj, Character.toString(letter), (int) (x + width / 2), (int) (y + width / 2), 0xFFFFFFFF, 1);
+     }
+ 
+     @Override
+     public void render() {
+ //        int gap = 4;
+-        int gap = (int) (this.gap.getValue() * scale);
+-        int buttonSize = (int) (this.buttonSize.getValue());
++        double gap = this.gap.getValue() * scale;
++        int buttonSize = this.buttonSize.getValue();
+         width = (int) (buttonSize * 3 + gap * 2);
+         height = (int) (buttonSize * 2 + gap);
+ 
+-        int scaledWidth = (int) (width * scale);
+-        int scaledHeight = (int) (height * scale);
++        double scaledWidth = (int) (width * scale);
++        double scaledHeight = height * scale;
+ 
+ //        GuiUtil.drawUnscaledRect(x, y, x + width, y + height, 0xFFFF0000);
+-        int center = x + scaledWidth / 2;
+-        int centerY = y + scaledHeight / 2;
+-        int scaledSize = (int) (buttonSize*scale);
++        double center = x + scaledWidth / 2;
++        double centerY = y + scaledHeight / 2;
++        double scaledSize = buttonSize * scale;
+ //        String a = mc.gameSettings.keyBindForward2.getKeyDescription();
+-        drawBox('W', 0, center - scaledSize / 2, y, scaledSize, scaledSize);
+-        drawBox('A', 0, center - scaledSize / 2 - scaledSize - gap, y + scaledSize + gap, scaledSize, scaledSize);
+-        drawBox('S', 0, center - scaledSize / 2, y + scaledSize + gap, scaledSize, scaledSize);
+-        drawBox('D', 0, center + scaledSize / 2 + gap, y + scaledSize + gap, scaledSize, scaledSize);
++        drawBox('W', mc.gameSettings.keyBindForward, center - scaledSize / 2, y, scaledSize, scaledSize);
++        drawBox('A', mc.gameSettings.keyBindLeft, center - scaledSize / 2 - scaledSize - gap, y + scaledSize + gap, scaledSize, scaledSize);
++        drawBox('S', mc.gameSettings.keyBindBack, center - scaledSize / 2, y + scaledSize + gap, scaledSize, scaledSize);
++        drawBox('D', mc.gameSettings.keyBindRight, center + scaledSize / 2 + gap, y + scaledSize + gap, scaledSize, scaledSize);
+ //        GuiUtil.drawUnscaledRect(x + width / 2 - 16, y, x + width / 2 + 16, y + 32, 0xFF00FF00);
+     }
+ }
+diff --git a/src/main/java/com/jlmsz/module/impl/KeystrokesModule.java b/src/main/java/com/jlmsz/module/impl/KeystrokesModule.java
+index 976be1d..a431335 100644
+--- a/src/main/java/com/jlmsz/module/impl/KeystrokesModule.java
++++ b/src/main/java/com/jlmsz/module/impl/KeystrokesModule.java
+@@ -5,11 +5,14 @@ import com.jlmsz.gui.overlay.Overlay;
+ import com.jlmsz.gui.overlay.ScreenOverlay;
+ import com.jlmsz.module.Module;
+ import com.jlmsz.module.ModuleCategory;
++import com.jlmsz.module.config.ColorModuleSetting;
+ import com.jlmsz.module.config.IntModuleSetting;
+ 
+ public class KeystrokesModule extends Module {
+-    private final IntModuleSetting gap = new IntModuleSetting(2, 0, 10);
+-    private final IntModuleSetting buttonSize = new IntModuleSetting(32, 16, 64);
++    private final IntModuleSetting gap = new IntModuleSetting(1, 0, 10);
++    private final IntModuleSetting buttonSize = new IntModuleSetting(28, 16, 64);
++//    private final ColorModuleSetting alpha = new ColorModuleSetting();
++    // TODO: Add color
+     private final KeystrokesOverlay overlay = new KeystrokesOverlay(mc, gap, buttonSize, 0, 0, 1);
+ 
+     public KeystrokesModule() {
+diff --git a/src/main/java/com/jlmsz/util/GuiUtil.java b/src/main/java/com/jlmsz/util/GuiUtil.java
+index 822bf29..b57a607 100644
+--- a/src/main/java/com/jlmsz/util/GuiUtil.java
++++ b/src/main/java/com/jlmsz/util/GuiUtil.java
+@@ -21,6 +21,39 @@ public class GuiUtil {
+         Gui.drawRect(left, top, right, bottom, color);
+     }
+ 
++    public static void drawRect(double left, double top, double right, double bottom, int color) {
++        if (left < right) {
++            double i = left;
++            left = right;
++            right = i;
++        }
++
++        if (top < bottom) {
++            double j = top;
++            top = bottom;
++            bottom = j;
++        }
++
++        float f3 = (float) (color >> 24 & 255) / 255.0F;
++        float f = (float) (color >> 16 & 255) / 255.0F;
++        float f1 = (float) (color >> 8 & 255) / 255.0F;
++        float f2 = (float) (color & 255) / 255.0F;
++        Tessellator tessellator = Tessellator.getInstance();
++        WorldRenderer worldrenderer = tessellator.getWorldRenderer();
++        GlStateManager.enableBlend();
++        GlStateManager.disableTexture2D();
++        GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
++        GlStateManager.color(f, f1, f2, f3);
++        worldrenderer.begin(7, DefaultVertexFormats.POSITION);
++        worldrenderer.pos(left, bottom, 0.0D).endVertex();
++        worldrenderer.pos(right, bottom, 0.0D).endVertex();
++        worldrenderer.pos(right, top, 0.0D).endVertex();
++        worldrenderer.pos(left, top, 0.0D).endVertex();
++        tessellator.draw();
++        GlStateManager.enableTexture2D();
++        GlStateManager.disableBlend();
++    }
++
+     public static void drawCircle(double x, double y, int radius, int sides, int color) {
+         Tessellator tessellator = Tessellator.getInstance();
+         WorldRenderer worldRenderer = tessellator.getWorldRenderer();
+-- 
+2.34.1
+

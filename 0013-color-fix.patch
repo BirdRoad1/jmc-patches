@@ -1,0 +1,142 @@
+From 87e92d52ec66f144c91dff57d59604f762f35471 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Thu, 26 Jun 2025 06:41:15 -0400
+Subject: [PATCH 13/60] color fix
+
+---
+ .../component/impl/ColorPickerComponent.java  | 12 +++++-
+ .../impl/CrosshairPreviewComponent.java       |  4 --
+ src/main/java/com/jlmsz/util/ColorUtil.java   | 43 +++++++++++++++++--
+ 3 files changed, 49 insertions(+), 10 deletions(-)
+
+diff --git a/src/main/java/com/jlmsz/gui/component/impl/ColorPickerComponent.java b/src/main/java/com/jlmsz/gui/component/impl/ColorPickerComponent.java
+index 76eb4c0..bdf914b 100644
+--- a/src/main/java/com/jlmsz/gui/component/impl/ColorPickerComponent.java
++++ b/src/main/java/com/jlmsz/gui/component/impl/ColorPickerComponent.java
+@@ -6,6 +6,7 @@ import com.jlmsz.module.impl.CrosshairModule;
+ import com.jlmsz.util.ColorUtil;
+ import com.jlmsz.util.GuiUtil;
+ import com.jlmsz.util.color.ARGBColor;
++import com.jlmsz.util.color.HSVColor;
+ import net.minecraft.client.Minecraft;
+ import net.minecraft.client.gui.Gui;
+ import net.minecraft.util.MathHelper;
+@@ -15,7 +16,6 @@ import org.lwjgl.opengl.GL15;
+ import org.lwjgl.opengl.GL20;
+ import org.lwjgl.opengl.GL30;
+ 
+-import javax.vecmath.Vector3f;
+ import java.io.BufferedReader;
+ import java.io.IOException;
+ import java.io.InputStream;
+@@ -67,6 +67,14 @@ public class ColorPickerComponent extends Gui implements IComponent {
+         this.setting = setting;
+         this.x = x;
+         this.y = y;
++
++        HSVColor initialColor = ColorUtil.rgbToHsv(setting.getValue());
++//        ARGBColor color = ColorUtil.hsvToRgb(new Vector3f((float) hueY / height, (float) cursorX / boxWidth, 1f - (float) cursorY / height));
++
++        cursorX = (int) (initialColor.s * boxWidth);
++        cursorY = (int) ((1 - initialColor.v) * height);
++        hueY = (int) (initialColor.h * height);
++
+         initBox();
+         initSlider();
+     }
+@@ -218,7 +226,7 @@ public class ColorPickerComponent extends Gui implements IComponent {
+     }
+ 
+     private void updateColor() {
+-        ARGBColor color = ColorUtil.hsvToRgb(new Vector3f((float) hueY / height, (float) cursorX / boxWidth, 1f - (float) cursorY / height));
++        ARGBColor color = ColorUtil.hsvToRgb(new HSVColor((float) hueY / height, (float) cursorX / boxWidth, 1f - (float) cursorY / height));
+         setting.setValue(color);
+     }
+ 
+diff --git a/src/main/java/com/jlmsz/gui/component/impl/CrosshairPreviewComponent.java b/src/main/java/com/jlmsz/gui/component/impl/CrosshairPreviewComponent.java
+index c5e476e..3002697 100644
+--- a/src/main/java/com/jlmsz/gui/component/impl/CrosshairPreviewComponent.java
++++ b/src/main/java/com/jlmsz/gui/component/impl/CrosshairPreviewComponent.java
+@@ -4,15 +4,11 @@ import com.jlmsz.gui.component.IComponent;
+ import com.jlmsz.module.config.CrosshairModuleSetting;
+ import com.jlmsz.module.config.DoubleModuleSetting;
+ import com.jlmsz.module.impl.CrosshairModule;
+-import com.jlmsz.util.GuiUtil;
+ import com.jlmsz.util.color.ARGBColor;
+ import net.minecraft.client.Minecraft;
+ import net.minecraft.client.gui.Gui;
+ import net.minecraft.client.gui.ScaledResolution;
+ import net.minecraft.client.renderer.GlStateManager;
+-import net.minecraft.client.renderer.Tessellator;
+-import net.minecraft.client.renderer.WorldRenderer;
+-import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
+ import org.lwjgl.opengl.GL11;
+ 
+ public class CrosshairPreviewComponent extends Gui implements IComponent {
+diff --git a/src/main/java/com/jlmsz/util/ColorUtil.java b/src/main/java/com/jlmsz/util/ColorUtil.java
+index 2be5d98..d6fe909 100644
+--- a/src/main/java/com/jlmsz/util/ColorUtil.java
++++ b/src/main/java/com/jlmsz/util/ColorUtil.java
+@@ -1,15 +1,16 @@
+ package com.jlmsz.util;
+ 
+ import com.jlmsz.util.color.ARGBColor;
++import com.jlmsz.util.color.HSVColor;
+ 
+ import javax.vecmath.Vector3f;
+ 
+ public class ColorUtil {
+ 
+-    public static ARGBColor hsvToRgb(Vector3f hsv) {
+-        float h = hsv.x;
+-        float s = hsv.y;
+-        float v = hsv.z;
++    public static ARGBColor hsvToRgb(HSVColor hsv) {
++        float h = hsv.h;
++        float s = hsv.s;
++        float v = hsv.v;
+ 
+         if (s == 0.0) {
+             return new ARGBColor(1.0f, v, v, v);
+@@ -31,4 +32,38 @@ public class ColorUtil {
+         else return new ARGBColor(1.0f, v, p, q);
+     }
+ 
++    public static HSVColor rgbToHsv(ARGBColor rgb) {
++        float r = rgb.r;
++        float g = rgb.g;
++        float b = rgb.b;
++
++        float max = Math.max(r, Math.max(g, b));
++        float min = Math.min(r, Math.min(g, b));
++        float delta = max - min;
++
++        float h;
++        float s;
++
++        if (delta > 0.00001f) {
++            s = (max == 0.0f) ? 0.0f : delta / max;
++
++            if (max == r) {
++                h = (g - b) / delta;
++            } else if (max == g) {
++                h = 2.0f + (b - r) / delta;
++            } else {
++                h = 4.0f + (r - g) / delta;
++            }
++
++            h /= 6.0f;
++            if (h < 0.0f) h += 1.0f;
++        } else {
++            h = 0.0f;
++            s = 0.0f;
++        }
++
++        return new HSVColor(h, s, max);
++    }
++
++
+ }
+-- 
+2.34.1
+

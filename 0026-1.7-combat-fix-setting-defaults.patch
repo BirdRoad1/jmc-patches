@@ -1,0 +1,26 @@
+From a9a930601cafdcc39667bc73ade7fa6c1d9ee50d Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sun, 29 Jun 2025 02:56:44 -0400
+Subject: [PATCH 26/60] 1.7 combat fix setting defaults
+
+---
+ src/main/java/com/jlmsz/module/impl/OldCombatModule.java | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/main/java/com/jlmsz/module/impl/OldCombatModule.java b/src/main/java/com/jlmsz/module/impl/OldCombatModule.java
+index c846318..1dacdb4 100644
+--- a/src/main/java/com/jlmsz/module/impl/OldCombatModule.java
++++ b/src/main/java/com/jlmsz/module/impl/OldCombatModule.java
+@@ -9,7 +9,7 @@ public class OldCombatModule extends Module {
+     public final BooleanModuleSetting oldAnimations;
+     public OldCombatModule() {
+         super("Old Combat", "Good old 1.7 combat", ModuleCategory.RENDER);
+-        addSetting("Stop breaking blocks", stopBreaking = new BooleanModuleSetting(false));
+-        addSetting("Old animations", oldAnimations = new BooleanModuleSetting(false));
++        addSetting("Stop breaking blocks", stopBreaking = new BooleanModuleSetting(true));
++        addSetting("Old animations", oldAnimations = new BooleanModuleSetting(true));
+     }
+ }
+-- 
+2.34.1
+

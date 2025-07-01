@@ -1,0 +1,2278 @@
+From ec25043ffd5d6f745f78a25721e39be90cf0a7ab Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sat, 28 Jun 2025 09:40:17 -0400
+Subject: [PATCH 20/60] Add modules, events, and hypixel utils
+
+---
+ src/main/java/com/jlmsz/JClient.java          |   2 +
+ .../jlmsz/event/impl/ChatReceivedEvent.java   |  18 +
+ .../jlmsz/event/impl/RenderEntityEvent.java   |  65 ++
+ .../com/jlmsz/event/impl/RenderEvent.java     |   8 +
+ .../java/com/jlmsz/event/impl/TickEvent.java  |   6 +
+ .../com/jlmsz/event/impl/WorldLoadEvent.java  |  16 +
+ .../java/com/jlmsz/module/ModuleRegistry.java |  30 +-
+ .../com/jlmsz/module/impl/BedAlarmModule.java | 131 ++++
+ .../jlmsz/module/impl/FullbrightModule.java   |  34 +
+ .../com/jlmsz/module/impl/HitboxesModule.java |  55 ++
+ .../com/jlmsz/module/impl/NametagsModule.java | 232 ++++++
+ .../jlmsz/module/impl/ObbyAlarmModule.java    |  75 ++
+ .../jlmsz/module/impl/OldCombatModule.java    |  15 +
+ src/main/java/com/jlmsz/util/Util.java        |  44 ++
+ .../java/com/jlmsz/util/color/HSVColor.java   |  13 +
+ .../util/hypixel/HypixelCurrentInfo.java      |   7 +
+ .../com/jlmsz/util/hypixel/HypixelUtil.java   |  89 +++
+ .../util/hypixel/ICurrentInfoCallback.java    |   7 +
+ .../jlmsz/util/renderer/IItemRenderer.java    |  29 +
+ .../jlmsz/util/renderer/IRenderManager.java   |  78 ++
+ .../util/renderer/ItemRendererLegacy.java     | 708 ++++++++++++++++++
+ .../util/renderer/ItemRendererProxy.java      |  90 +++
+ .../client/network/NetHandlerPlayClient.java  | 180 +----
+ .../client/renderer/entity/RenderItem.java    |  10 +-
+ .../renderer/entity/RendererLivingEntity.java |   4 +-
+ 25 files changed, 1768 insertions(+), 178 deletions(-)
+ create mode 100644 src/main/java/com/jlmsz/event/impl/ChatReceivedEvent.java
+ create mode 100644 src/main/java/com/jlmsz/event/impl/RenderEntityEvent.java
+ create mode 100644 src/main/java/com/jlmsz/event/impl/TickEvent.java
+ create mode 100644 src/main/java/com/jlmsz/event/impl/WorldLoadEvent.java
+ create mode 100644 src/main/java/com/jlmsz/module/impl/BedAlarmModule.java
+ create mode 100644 src/main/java/com/jlmsz/module/impl/FullbrightModule.java
+ create mode 100644 src/main/java/com/jlmsz/module/impl/HitboxesModule.java
+ create mode 100644 src/main/java/com/jlmsz/module/impl/NametagsModule.java
+ create mode 100644 src/main/java/com/jlmsz/module/impl/ObbyAlarmModule.java
+ create mode 100644 src/main/java/com/jlmsz/module/impl/OldCombatModule.java
+ create mode 100644 src/main/java/com/jlmsz/util/Util.java
+ create mode 100644 src/main/java/com/jlmsz/util/color/HSVColor.java
+ create mode 100644 src/main/java/com/jlmsz/util/hypixel/HypixelCurrentInfo.java
+ create mode 100644 src/main/java/com/jlmsz/util/hypixel/HypixelUtil.java
+ create mode 100644 src/main/java/com/jlmsz/util/hypixel/ICurrentInfoCallback.java
+ create mode 100644 src/main/java/com/jlmsz/util/renderer/IItemRenderer.java
+ create mode 100644 src/main/java/com/jlmsz/util/renderer/IRenderManager.java
+ create mode 100644 src/main/java/com/jlmsz/util/renderer/ItemRendererLegacy.java
+ create mode 100644 src/main/java/com/jlmsz/util/renderer/ItemRendererProxy.java
+
+diff --git a/src/main/java/com/jlmsz/JClient.java b/src/main/java/com/jlmsz/JClient.java
+index d97b594..93bbb95 100644
+--- a/src/main/java/com/jlmsz/JClient.java
++++ b/src/main/java/com/jlmsz/JClient.java
+@@ -4,6 +4,7 @@ import com.jlmsz.event.EventBus;
+ import com.jlmsz.event.EventHandler;
+ import com.jlmsz.event.impl.GameStartedEvent;
+ import com.jlmsz.module.ModuleRegistry;
++import com.jlmsz.util.hypixel.HypixelUtil;
+ import net.minecraft.util.ResourceLocation;
+ 
+ public class JClient {
+@@ -18,6 +19,7 @@ public class JClient {
+     @EventHandler
+     public void handleEvent(GameStartedEvent event) {
+         ModuleRegistry.init();
++        HypixelUtil.init();
+         System.out.println("jClient has started!!!");
+     }
+ }
+diff --git a/src/main/java/com/jlmsz/event/impl/ChatReceivedEvent.java b/src/main/java/com/jlmsz/event/impl/ChatReceivedEvent.java
+new file mode 100644
+index 0000000..cbc86e2
+--- /dev/null
++++ b/src/main/java/com/jlmsz/event/impl/ChatReceivedEvent.java
+@@ -0,0 +1,18 @@
++package com.jlmsz.event.impl;
++
++import com.jlmsz.event.Event;
++import net.minecraft.util.IChatComponent;
++
++public class ChatReceivedEvent extends Event {
++
++    private final IChatComponent component;
++
++    public ChatReceivedEvent(IChatComponent component) {
++        super(true);
++        this.component = component;
++    }
++
++    public IChatComponent getComponent() {
++        return component;
++    }
++}
+diff --git a/src/main/java/com/jlmsz/event/impl/RenderEntityEvent.java b/src/main/java/com/jlmsz/event/impl/RenderEntityEvent.java
+new file mode 100644
+index 0000000..1d38f3a
+--- /dev/null
++++ b/src/main/java/com/jlmsz/event/impl/RenderEntityEvent.java
+@@ -0,0 +1,65 @@
++package com.jlmsz.event.impl;
++
++import com.jlmsz.event.Event;
++import net.minecraft.entity.Entity;
++
++public abstract class RenderEntityEvent extends Event {
++    private final Entity entity;
++    private final double x;
++    private final double y;
++    private final double z;
++    private final float entityYaw;
++    private final float partialTicks;
++    private final boolean hideDebugBox;
++
++    public RenderEntityEvent(Entity entity, double x, double y, double z, float entityYaw, float partialTicks, boolean hideDebugBox, boolean cancellable) {
++        super(cancellable);
++        this.entity = entity;
++        this.x = x;
++        this.y = y;
++        this.z = z;
++        this.entityYaw = entityYaw;
++        this.partialTicks = partialTicks;
++        this.hideDebugBox = hideDebugBox;
++    }
++
++    public Entity getEntity() {
++        return entity;
++    }
++
++    public double getX() {
++        return x;
++    }
++
++    public double getY() {
++        return y;
++    }
++
++    public double getZ() {
++        return z;
++    }
++
++    public float getEntityYaw() {
++        return entityYaw;
++    }
++
++    public float getPartialTicks() {
++        return partialTicks;
++    }
++
++    public boolean isHideDebugBox() {
++        return hideDebugBox;
++    }
++
++    public static class Pre extends RenderEntityEvent {
++        public Pre(Entity entity, double x, double y, double z, float entityYaw, float partialTicks, boolean hideDebugBox) {
++            super(entity, x, y, z, entityYaw, partialTicks, hideDebugBox, true);
++        }
++    }
++
++    public static class Post extends RenderEntityEvent {
++        public Post(Entity entity, double x, double y, double z, float entityYaw, float partialTicks, boolean hideDebugBox) {
++            super(entity, x, y, z, entityYaw, partialTicks, hideDebugBox, false);
++        }
++    }
++}
+diff --git a/src/main/java/com/jlmsz/event/impl/RenderEvent.java b/src/main/java/com/jlmsz/event/impl/RenderEvent.java
+index 8e39478..442a48c 100644
+--- a/src/main/java/com/jlmsz/event/impl/RenderEvent.java
++++ b/src/main/java/com/jlmsz/event/impl/RenderEvent.java
+@@ -8,6 +8,14 @@ public class RenderEvent {
+     }
+ 
+     public static class Post extends Event {
++        private final float partialTicks;
+ 
++        public Post(float partialTicks) {
++            this.partialTicks = partialTicks;
++        }
++
++        public float getPartialTicks() {
++            return partialTicks;
++        }
+     }
+ }
+diff --git a/src/main/java/com/jlmsz/event/impl/TickEvent.java b/src/main/java/com/jlmsz/event/impl/TickEvent.java
+new file mode 100644
+index 0000000..92870d3
+--- /dev/null
++++ b/src/main/java/com/jlmsz/event/impl/TickEvent.java
+@@ -0,0 +1,6 @@
++package com.jlmsz.event.impl;
++
++import com.jlmsz.event.Event;
++
++public class TickEvent extends Event {
++}
+diff --git a/src/main/java/com/jlmsz/event/impl/WorldLoadEvent.java b/src/main/java/com/jlmsz/event/impl/WorldLoadEvent.java
+new file mode 100644
+index 0000000..3b82b14
+--- /dev/null
++++ b/src/main/java/com/jlmsz/event/impl/WorldLoadEvent.java
+@@ -0,0 +1,16 @@
++package com.jlmsz.event.impl;
++
++import com.jlmsz.event.Event;
++import net.minecraft.client.multiplayer.WorldClient;
++
++public class WorldLoadEvent extends Event {
++    private final WorldClient client;
++
++    public WorldLoadEvent(WorldClient client) {
++        this.client = client;
++    }
++
++    public WorldClient getClient() {
++        return client;
++    }
++}
+diff --git a/src/main/java/com/jlmsz/module/ModuleRegistry.java b/src/main/java/com/jlmsz/module/ModuleRegistry.java
+index 860b082..4ac2de3 100644
+--- a/src/main/java/com/jlmsz/module/ModuleRegistry.java
++++ b/src/main/java/com/jlmsz/module/ModuleRegistry.java
+@@ -3,19 +3,31 @@ package com.jlmsz.module;
+ import com.jlmsz.module.impl.*;
+ 
+ import java.util.ArrayList;
+-import java.util.Arrays;
++import java.util.HashMap;
+ import java.util.List;
+ 
+ public class ModuleRegistry {
+ 
+-    private static List<Module> moduleList;
++    private static HashMap<String, Module> moduleMap;
+ 
+     public static void init() {
+-        moduleList = Arrays.asList(new SprintModule(), new CrosshairModule(), new FullbrightModule(), new HitboxesModule(), new OldCombatModule());
++        moduleMap = new HashMap<>();
++        registerModule(new SprintModule());
++        registerModule(new CrosshairModule());
++        registerModule(new FullbrightModule());
++        registerModule(new HitboxesModule());
++        registerModule(new OldCombatModule());
++        registerModule(new NametagsModule());
++        registerModule(new ObbyAlarmModule());
++        registerModule(new BedAlarmModule());
++    }
++
++    private static void registerModule(Module module) {
++        moduleMap.put(module.getName(), module);
+     }
+ 
+     public static <T extends Module> T getModuleByClass(Class<T> clazz) {
+-        for (Module module : moduleList) {
++        for (Module module : moduleMap.values()) {
+             if (module.getClass().equals(clazz)) {
+                 return clazz.cast(module);
+             }
+@@ -25,13 +37,7 @@ public class ModuleRegistry {
+     }
+ 
+     public static Module getModuleByName(String name) {
+-        for (Module module : moduleList) {
+-            if (module.getName().equalsIgnoreCase(name)) {
+-                return module;
+-            }
+-        }
+-
+-        return null;
++        return moduleMap.get(name);
+     }
+ 
+     /**
+@@ -41,7 +47,7 @@ public class ModuleRegistry {
+      * @return A new list of modules
+      */
+     public static List<Module> getModuleList() {
+-        return new ArrayList<>(moduleList);
++        return new ArrayList<>(moduleMap.values());
+     }
+ 
+ }
+diff --git a/src/main/java/com/jlmsz/module/impl/BedAlarmModule.java b/src/main/java/com/jlmsz/module/impl/BedAlarmModule.java
+new file mode 100644
+index 0000000..8ca10b4
+--- /dev/null
++++ b/src/main/java/com/jlmsz/module/impl/BedAlarmModule.java
+@@ -0,0 +1,131 @@
++package com.jlmsz.module.impl;
++
++import com.jlmsz.JClient;
++import com.jlmsz.event.EventHandler;
++import com.jlmsz.event.impl.TickEvent;
++import com.jlmsz.event.impl.WorldLoadEvent;
++import com.jlmsz.module.Module;
++import com.jlmsz.module.ModuleCategory;
++import com.jlmsz.module.config.IntModuleSetting;
++import com.jlmsz.util.Util;
++import com.jlmsz.util.hypixel.HypixelUtil;
++import net.minecraft.block.Block;
++import net.minecraft.block.BlockBed;
++import net.minecraft.block.state.IBlockState;
++import net.minecraft.client.entity.EntityOtherPlayerMP;
++import net.minecraft.client.entity.EntityPlayerSP;
++import net.minecraft.entity.Entity;
++import net.minecraft.entity.player.EntityPlayer;
++import net.minecraft.init.Blocks;
++import net.minecraft.scoreboard.Team;
++import net.minecraft.util.BlockPos;
++import net.minecraft.util.ChatComponentText;
++
++import java.util.HashMap;
++import java.util.Map;
++import java.util.UUID;
++
++public class BedAlarmModule extends Module {
++    private BlockPos bedBlock;
++    private int tickDelayLeft = -1;
++    private final Map<UUID, Integer> cooldownMap = new HashMap<>();
++    private final IntModuleSetting cooldownSetting;
++    private final IntModuleSetting distanceSetting;
++
++    public BedAlarmModule() {
++        super("Bed alarm", "No enemies at base!", ModuleCategory.UTIL);
++        addSetting("Cooldown (seconds)", cooldownSetting = new IntModuleSetting(20, 5, 30));
++        addSetting("Enemy Distance", distanceSetting = new IntModuleSetting(14, 5, 50));
++        JClient.EVENT_BUS.registerListener(this);
++    }
++
++    @EventHandler
++    public void onWorldLoad(WorldLoadEvent event) {
++        bedBlock = null;
++        tickDelayLeft = -1;
++        HypixelUtil.instance.getCurrentInfo((info) -> {
++            String gametype = info.gametype;
++            if (gametype != null && gametype.equals("BEDWARS") && info.lobbyname == null) {
++                tickDelayLeft = 10;
++            }
++        });
++    }
++
++    private BlockPos searchForBed(EntityPlayer player, float radius) {
++
++        for (double x = player.posX - radius; x < player.posX + radius; x++) {
++            for (double y = player.posY - 4; y < player.posY + 4; y++) {
++                for (double z = player.posZ - radius; z < player.posZ + radius; z++) {
++                    BlockPos pos = new BlockPos((int) x, (int) y, (int) z);
++                    IBlockState blockState = mc.theWorld.getBlockState(pos);
++                    if (blockState == null) continue;
++
++                    Block block = blockState.getBlock();
++                    if (block != null && blockState.getBlock() instanceof BlockBed) {
++                        return pos;
++                    }
++                }
++            }
++        }
++
++        return null;
++    }
++
++    @EventHandler
++    public void onTick(TickEvent event) {
++        if (!this.isEnabled()) return;
++        if (mc.theWorld == null || mc.thePlayer == null) return;
++
++        if (tickDelayLeft > 0) {
++            tickDelayLeft--;
++            return;
++        } else if (tickDelayLeft == 0) {
++            // Find nearest bed block
++            float radius = 15; // bed in 50 block radius
++            EntityPlayerSP player = mc.thePlayer;
++
++            BlockPos bed = searchForBed(player, radius);
++
++            if (bed != null) {
++                // found bed, stop checking
++                bedBlock = bed;
++                tickDelayLeft = -1;
++            } else {
++                // no bed found, re-check again in a second
++                System.out.println("No bed found, checking in 1s");
++                tickDelayLeft = 20;
++            }
++        }
++
++        if (bedBlock == null) return;
++
++        for (Entity entity : mc.theWorld.loadedEntityList) {
++            if (!(entity instanceof EntityOtherPlayerMP)) continue;
++            EntityOtherPlayerMP plr = (EntityOtherPlayerMP) entity;
++            UUID plrUUID = plr.getUniqueID();
++            Integer cooldown = cooldownMap.get(plr.getUniqueID());
++            if (cooldown != null) {
++                if (cooldown > (int) (System.currentTimeMillis() / 1000)) {
++                    continue;
++                } else {
++                    cooldownMap.remove(plrUUID);
++                }
++            }
++
++            double plrX = plr.posX;
++            double plrZ = plr.posZ;
++            double bedX = bedBlock.getX();
++            double bedZ = bedBlock.getZ();
++
++            Team team = plr.getTeam();
++            if (team == null) continue;
++            String stripped = team.getRegisteredName().replaceAll("\\d", "");
++            Team myTeam = mc.thePlayer.getTeam();
++            boolean sameTeam = myTeam != null && stripped.equals(myTeam.getRegisteredName().replaceAll("\\d", ""));
++            if (!sameTeam && mc.theWorld.getBlockState(bedBlock).getBlock() == Blocks.bed && Util.horizontalDistance(plrX, plrZ, bedX, bedZ) <= distanceSetting.getValue()) {
++                mc.ingameGUI.getChatGUI().printChatMessage(new ChatComponentText("[BedAlarm] An enemy " + plr.getName() + " from team " + stripped + " is near your bed!"));
++                cooldownMap.put(plrUUID, (int) (System.currentTimeMillis() / 1000) + cooldownSetting.getValue());
++            }
++        }
++    }
++}
+diff --git a/src/main/java/com/jlmsz/module/impl/FullbrightModule.java b/src/main/java/com/jlmsz/module/impl/FullbrightModule.java
+new file mode 100644
+index 0000000..7162cb1
+--- /dev/null
++++ b/src/main/java/com/jlmsz/module/impl/FullbrightModule.java
+@@ -0,0 +1,34 @@
++package com.jlmsz.module.impl;
++
++import com.jlmsz.JClient;
++import com.jlmsz.event.EventHandler;
++import com.jlmsz.event.impl.RenderEvent;
++import com.jlmsz.module.Module;
++import com.jlmsz.module.ModuleCategory;
++
++public class FullbrightModule extends Module {
++
++    private float initialGamma = 0;
++
++    public FullbrightModule() {
++        super("Fullbright", "Brightens up your day", ModuleCategory.RENDER);
++        JClient.EVENT_BUS.registerListener(this);
++    }
++
++    @EventHandler
++    public void onRender(RenderEvent.Pre event) {
++        if (!this.isEnabled()) return;
++        mc.gameSettings.gamma = 1000;
++    }
++
++    @Override
++    public void setEnabled(boolean enabled) {
++        if (enabled) {
++            initialGamma = mc.gameSettings.gamma;
++        } else {
++            mc.gameSettings.gamma = initialGamma;
++        }
++
++        super.setEnabled(enabled);
++    }
++}
+diff --git a/src/main/java/com/jlmsz/module/impl/HitboxesModule.java b/src/main/java/com/jlmsz/module/impl/HitboxesModule.java
+new file mode 100644
+index 0000000..be49dcb
+--- /dev/null
++++ b/src/main/java/com/jlmsz/module/impl/HitboxesModule.java
+@@ -0,0 +1,55 @@
++package com.jlmsz.module.impl;
++
++import com.jlmsz.JClient;
++import com.jlmsz.event.EventHandler;
++import com.jlmsz.event.impl.RenderEntityEvent;
++import com.jlmsz.module.Module;
++import com.jlmsz.module.ModuleCategory;
++import com.jlmsz.module.config.DoubleModuleSetting;
++import net.minecraft.client.entity.EntityOtherPlayerMP;
++import net.minecraft.client.renderer.GlStateManager;
++import net.minecraft.client.renderer.RenderGlobal;
++import net.minecraft.entity.Entity;
++import net.minecraft.util.AxisAlignedBB;
++import org.lwjgl.opengl.GL11;
++
++public class HitboxesModule extends Module {
++    private final DoubleModuleSetting lineWidth;
++
++    public HitboxesModule() {
++        super("Hitboxes", "See player hitboxes", ModuleCategory.RENDER);
++        JClient.EVENT_BUS.registerListener(this);
++        addSetting("Line Width", lineWidth = new DoubleModuleSetting(1, 1, 5, 0.05));
++    }
++
++    @EventHandler
++    public void onRender(RenderEntityEvent.Post event) {
++        if (!this.isEnabled()) return;
++
++        Entity entity = event.getEntity();
++        if (!(entity instanceof EntityOtherPlayerMP)) return;
++        EntityOtherPlayerMP plr = (EntityOtherPlayerMP) entity;
++        renderDebugBoundingBox(plr, event.getX(), event.getY(), event.getZ(), event.getEntityYaw(), event.getPartialTicks());
++    }
++
++    private void renderDebugBoundingBox(Entity entityIn, double x, double y, double z, float entityYaw, float partialTicks) {
++        GlStateManager.depthMask(false);
++        GlStateManager.disableTexture2D();
++        GlStateManager.disableLighting();
++        GlStateManager.disableCull();
++        GlStateManager.disableBlend();
++        float f = entityIn.width / 2.0F;
++        AxisAlignedBB axisalignedbb = entityIn.getEntityBoundingBox();
++        AxisAlignedBB axisalignedbb1 = new AxisAlignedBB(axisalignedbb.minX - entityIn.posX + x, axisalignedbb.minY - entityIn.posY + y, axisalignedbb.minZ - entityIn.posZ + z, axisalignedbb.maxX - entityIn.posX + x, axisalignedbb.maxY - entityIn.posY + y, axisalignedbb.maxZ - entityIn.posZ + z);
++
++        GL11.glLineWidth((float) (double) lineWidth.getValue());
++        RenderGlobal.drawOutlinedBoundingBox(axisalignedbb1, 255, 255, 255, 255);
++        GL11.glLineWidth(1f);
++        GlStateManager.enableTexture2D();
++        GlStateManager.enableLighting();
++        GlStateManager.enableCull();
++        GlStateManager.disableBlend();
++        GlStateManager.depthMask(true);
++
++    }
++}
+diff --git a/src/main/java/com/jlmsz/module/impl/NametagsModule.java b/src/main/java/com/jlmsz/module/impl/NametagsModule.java
+new file mode 100644
+index 0000000..1af8364
+--- /dev/null
++++ b/src/main/java/com/jlmsz/module/impl/NametagsModule.java
+@@ -0,0 +1,232 @@
++package com.jlmsz.module.impl;
++
++import com.jlmsz.JClient;
++import com.jlmsz.event.EventHandler;
++import com.jlmsz.event.impl.RenderEvent;
++import com.jlmsz.module.Module;
++import com.jlmsz.module.ModuleCategory;
++import com.jlmsz.util.GuiUtil;
++import com.jlmsz.util.Util;
++import net.minecraft.client.entity.EntityOtherPlayerMP;
++import net.minecraft.client.renderer.GlStateManager;
++import net.minecraft.client.renderer.Tessellator;
++import net.minecraft.client.renderer.WorldRenderer;
++import net.minecraft.client.renderer.texture.TextureMap;
++import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
++import net.minecraft.client.resources.model.IBakedModel;
++import net.minecraft.entity.Entity;
++import net.minecraft.item.ItemStack;
++import org.lwjgl.opengl.GL11;
++
++import java.util.ArrayList;
++import java.util.List;
++
++public class NametagsModule extends Module {
++    public NametagsModule() {
++        super("Nametags", "Advanced player nametags", ModuleCategory.RENDER);
++        JClient.EVENT_BUS.registerListener(this);
++    }
++
++    private void renderItemRow(List<ItemStack> items) {
++        GlStateManager.pushMatrix();
++
++        // Apply transformations
++        GlStateManager.scale(1, 1, 0.01F);
++        GlStateManager.translate(0.25F, 0.25F, 0F);
++
++        // Set up rendering state
++        GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
++        GlStateManager.enableBlend();
++        GlStateManager.enableAlpha();
++        GlStateManager.disableLighting();
++        GlStateManager.enableTexture2D();
++        GlStateManager.enableDepth();
++        GlStateManager.enableRescaleNormal();
++        GlStateManager.alphaFunc(516, 0.1F);
++        GlStateManager.blendFunc(770, 771);
++        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
++        GlStateManager.depthFunc(GL11.GL_ALWAYS);
++
++        // Render the item
++        for (int i = 0; i < items.size(); i++) {
++            ItemStack stack = items.get(i);
++
++            IBakedModel model = mc.getRenderItem().getItemModelMesher().getItemModel(stack);
++            mc.getRenderItem().renderItem(stack, model);
++
++            if (i < items.size() - 1) {
++
++                GlStateManager.translate(-0.5, 0, 0);
++            }
++        }
++
++        // Restore GL state
++        GlStateManager.depthFunc(515);
++        GlStateManager.disableRescaleNormal();
++        GlStateManager.disableBlend();
++        GlStateManager.disableAlpha();
++        GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
++
++        GlStateManager.popMatrix();
++    }
++
++    private void renderItem(ItemStack stack) {
++        GlStateManager.pushMatrix();
++
++        // Prepare model and sprite (sprite is unused here but might be needed for further effects)
++        IBakedModel model = mc.getRenderItem().getItemModelMesher().getItemModel(stack);
++
++        // Apply transformations
++        GlStateManager.scale(1, 1, 0.01F);
++        GlStateManager.translate(0.25F, 0.25F, 0F);
++
++        // Set up rendering state
++        GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
++        GlStateManager.enableBlend();
++        GlStateManager.enableAlpha();
++        GlStateManager.disableLighting();
++        GlStateManager.enableTexture2D();
++        GlStateManager.enableDepth();
++        GlStateManager.enableRescaleNormal();
++        GlStateManager.alphaFunc(516, 0.1F);
++        GlStateManager.blendFunc(770, 771);
++        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
++        GlStateManager.depthFunc(GL11.GL_ALWAYS);
++
++        // Render the item
++        mc.getRenderItem().renderItem(stack, model);
++
++        // Restore GL state
++        GlStateManager.depthFunc(515);
++        GlStateManager.disableRescaleNormal();
++        GlStateManager.disableBlend();
++        GlStateManager.disableAlpha();
++        GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
++
++        GlStateManager.popMatrix();
++    }
++
++
++    public void drawRect(double left, double top, double right, double bottom) {
++        Tessellator tessellator = Tessellator.getInstance();
++        WorldRenderer worldrenderer = tessellator.getWorldRenderer();
++        worldrenderer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION);
++        worldrenderer.pos(left, bottom, 0.0D).endVertex(); // bottom left
++        worldrenderer.pos(right, bottom, 0.0D).endVertex(); // bottom right
++        worldrenderer.pos(right, top, 0.0D).endVertex(); // top right
++        worldrenderer.pos(left, top, 0.0D).endVertex(); // top left
++        tessellator.draw();
++    }
++
++    @EventHandler
++    public void onRender(RenderEvent.Post event) {
++        if (!this.isEnabled()) return;
++
++        GlStateManager.matrixMode(GL11.GL_MODELVIEW);
++        GlStateManager.enableAlpha();
++        GlStateManager.disableDepth();
++        GlStateManager.disableCull();
++        GlStateManager.disableTexture2D();
++        GlStateManager.disableLighting();
++        GlStateManager.depthMask(false);
++
++        GlStateManager.enableBlend();
++        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
++        GlStateManager.color(1f, 1f, 1f, 1f);
++        GlStateManager.disableBlend();
++
++        GlStateManager.enableTexture2D();
++
++        float partialTicks = event.getPartialTicks();
++
++        double interpPlayerX = mc.thePlayer.prevPosX + (mc.thePlayer.posX - mc.thePlayer.prevPosX) * partialTicks;
++        double interpPlayerY = mc.thePlayer.prevPosY + (mc.thePlayer.posY - mc.thePlayer.prevPosY) * partialTicks;
++        double interpPlayerZ = mc.thePlayer.prevPosZ + (mc.thePlayer.posZ - mc.thePlayer.prevPosZ) * partialTicks;
++
++
++        for (Entity entity : mc.theWorld.loadedEntityList) {
++            if (!(entity instanceof EntityOtherPlayerMP)) continue;
++            EntityOtherPlayerMP player = (EntityOtherPlayerMP) entity;
++
++            double interpEntityX = entity.prevPosX + (entity.posX - entity.prevPosX) * partialTicks;
++            double interpEntityY = entity.prevPosY + (entity.posY - entity.prevPosY) * partialTicks;
++            double interpEntityZ = entity.prevPosZ + (entity.posZ - entity.prevPosZ) * partialTicks;
++
++            GlStateManager.pushMatrix();
++
++            double width;
++
++            GlStateManager.translate(interpEntityX - interpPlayerX, interpEntityY - interpPlayerY + entity.height + .6, interpEntityZ - interpPlayerZ);
++            GlStateManager.rotate(-mc.thePlayer.rotationYaw, 0, 1, 0);
++            GlStateManager.rotate(mc.thePlayer.rotationPitch, 1, 0, 0);
++
++            ItemStack[] armor = player.inventory.armorInventory;
++            ItemStack heldItem = player.getHeldItem();
++            int itemCount = heldItem == null ? 0 : 1;
++
++            for (ItemStack stack : armor) {
++                if (stack != null) itemCount++;
++            }
++
++            double itemWidth = 0.5;
++            width = itemWidth * itemCount;
++
++
++            GlStateManager.pushMatrix();
++            GlStateManager.translate(width / 2, 0, 0);
++            GlStateManager.translate(-0.5, 0, 0);
++
++            mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
++//            mc.getTextureManager()
++//                    .getTexture(TextureMap.locationBlocksTexture)
++//                    .setBlurMipmap(false, false);
++
++            List<ItemStack> items = new ArrayList<>();
++
++            if (player.getHeldItem() != null) {
++                items.add(player.getHeldItem());
++            }
++
++            for (int i = armor.length - 1; i >= 0; i--) {
++                ItemStack item = armor[i];
++                if (item == null) continue;
++                items.add(item);
++            }
++
++            renderItemRow(items);
++
++            GlStateManager.disableTexture2D();
++            GlStateManager.popMatrix();
++
++            GlStateManager.pushMatrix();
++            GlStateManager.translate(0, -.1f, 0);
++            GlStateManager.enableTexture2D();
++            GlStateManager.scale(-1, -1, 1);
++            String name = player.getName();
++            float stringWidth = mc.fontRendererObj.getStringWidth(name) * 0.02f;
++            float health = player.getHealth();
++            GlStateManager.disableDepth();
++            GlStateManager.translate(-stringWidth / 2, 0, 0);
++            GuiUtil.drawUnscaledString(mc.fontRendererObj, name, 0, 0, 0xFFFFFF, 0.02f);
++            GlStateManager.translate(stringWidth + 0.1, 0, 0);
++            GuiUtil.drawUnscaledString(mc.fontRendererObj, Integer.toString((int) health), 0, 0, Util.getHealthColor(health), 0.02f);
++            GlStateManager.popMatrix();
++
++            // Restore OpenGL state
++            GlStateManager.popMatrix();
++        }
++
++        GlStateManager.enableDepth();
++        GlStateManager.disableTexture2D();
++        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ZERO);
++        GL11.glColor4f(1.0f, 1.0f, 1.0f, 0.5f);
++        GlStateManager.enableDepth();
++        GlStateManager.disableCull();
++        GlStateManager.disableLighting();
++        GlStateManager.enableAlpha();
++        GlStateManager.enableTexture2D();
++        GlStateManager.enableFog();
++        GlStateManager.enableBlend();
++    }
++
++}
+diff --git a/src/main/java/com/jlmsz/module/impl/ObbyAlarmModule.java b/src/main/java/com/jlmsz/module/impl/ObbyAlarmModule.java
+new file mode 100644
+index 0000000..740bc45
+--- /dev/null
++++ b/src/main/java/com/jlmsz/module/impl/ObbyAlarmModule.java
+@@ -0,0 +1,75 @@
++package com.jlmsz.module.impl;
++
++import com.jlmsz.JClient;
++import com.jlmsz.event.EventHandler;
++import com.jlmsz.event.impl.RenderEvent;
++import com.jlmsz.event.impl.TickEvent;
++import com.jlmsz.event.impl.WorldLoadEvent;
++import com.jlmsz.module.Module;
++import com.jlmsz.module.ModuleCategory;
++import net.minecraft.client.entity.EntityOtherPlayerMP;
++import net.minecraft.entity.Entity;
++import net.minecraft.init.Blocks;
++import net.minecraft.item.Item;
++import net.minecraft.item.ItemStack;
++import net.minecraft.scoreboard.Team;
++import net.minecraft.util.ChatComponentText;
++
++import java.util.ArrayList;
++import java.util.List;
++import java.util.UUID;
++
++public class ObbyAlarmModule extends Module {
++    private final List<UUID> obbyPlayers = new ArrayList<>();
++    private int dingTicksLeft = -1;
++    private int dingsLeft = 0;
++
++    public ObbyAlarmModule() {
++        super("Obby Alarm", "Notifications on obby", ModuleCategory.UTIL);
++        JClient.EVENT_BUS.registerListener(this);
++    }
++
++    @EventHandler
++    public void onWorldLoad(WorldLoadEvent event) {
++        obbyPlayers.clear();
++        System.out.println("WORLD RE-LOADED");
++    }
++
++    @EventHandler
++    public void onTick(TickEvent event) {
++        if (dingTicksLeft > 0) {
++            dingTicksLeft--;
++        } else if (dingTicksLeft == 0 && mc.thePlayer != null && mc.theWorld != null) {
++            mc.theWorld.playSound(mc.thePlayer.posX, mc.thePlayer.posY, mc.thePlayer.posZ, "note.pling", 1, 1.9f, false);
++            dingTicksLeft--;
++            dingsLeft--;
++            if (dingsLeft > 0) {
++                dingTicksLeft = 10;
++            }
++        }
++    }
++
++    @EventHandler
++    public void onRender(RenderEvent.Post event) {
++        if (!this.isEnabled()) return;
++        if (mc.theWorld == null) return;
++        for (Entity entity : mc.theWorld.loadedEntityList) {
++            if (!(entity instanceof EntityOtherPlayerMP)) continue;
++            EntityOtherPlayerMP plr = (EntityOtherPlayerMP) entity;
++            if (obbyPlayers.contains(plr.getUniqueID())) continue;
++
++            ItemStack item = plr.getHeldItem();
++            if (item != null && item.getItem() == Item.getItemFromBlock(Blocks.obsidian)) {
++                Team team = plr.getTeam();
++                String teamName = team == null ? "none" : team.getRegisteredName();
++                mc.ingameGUI.getChatGUI().printChatMessage(new ChatComponentText("[ObbyAlarm] " + plr.getName() + " of team " + teamName + " has obsidian!"));
++                obbyPlayers.add(plr.getUniqueID());
++                if (mc.thePlayer != null) {
++//                    mc.theWorld.playSound(mc.thePlayer.posX, mc.thePlayer.posY, mc.thePlayer.posZ, "note.pling", 1, 1.9f, false);
++                    dingTicksLeft = 10;
++                    dingsLeft = 3;
++                }
++            }
++        }
++    }
++}
+diff --git a/src/main/java/com/jlmsz/module/impl/OldCombatModule.java b/src/main/java/com/jlmsz/module/impl/OldCombatModule.java
+new file mode 100644
+index 0000000..c846318
+--- /dev/null
++++ b/src/main/java/com/jlmsz/module/impl/OldCombatModule.java
+@@ -0,0 +1,15 @@
++package com.jlmsz.module.impl;
++
++import com.jlmsz.module.Module;
++import com.jlmsz.module.ModuleCategory;
++import com.jlmsz.module.config.BooleanModuleSetting;
++
++public class OldCombatModule extends Module {
++    public final BooleanModuleSetting stopBreaking;
++    public final BooleanModuleSetting oldAnimations;
++    public OldCombatModule() {
++        super("Old Combat", "Good old 1.7 combat", ModuleCategory.RENDER);
++        addSetting("Stop breaking blocks", stopBreaking = new BooleanModuleSetting(false));
++        addSetting("Old animations", oldAnimations = new BooleanModuleSetting(false));
++    }
++}
+diff --git a/src/main/java/com/jlmsz/util/Util.java b/src/main/java/com/jlmsz/util/Util.java
+new file mode 100644
+index 0000000..43432a8
+--- /dev/null
++++ b/src/main/java/com/jlmsz/util/Util.java
+@@ -0,0 +1,44 @@
++package com.jlmsz.util;
++
++public class Util {
++
++    private static final int[] healthColors = {
++            0xffff0000, // 0
++            0xffff1900, // 1
++            0xffff3300, // 2
++            0xffff4c00, // 3
++            0xffff6600, // 4
++            0xffff7f00, // 5
++            0xffff9900, // 6
++            0xffffb200, // 7
++            0xffffcc00, // 8
++            0xffffe500, // 9
++            0xffffff00, // 10
++            0xffe5ff00, // 11
++            0xffccff00, // 12
++            0xffb2ff00, // 13
++            0xff99ff00, // 14
++            0xff7fff00, // 15
++            0xff66ff00, // 16
++            0xff4cff00, // 17
++            0xff33ff00, // 18
++            0xff19ff00, // 19
++            0xff00ff00  // 20
++    };
++
++    public static int getHealthColor(float health) {
++        if (health < 0 || health >= 21) {
++            return 0xFFFF0000;
++        }
++        return healthColors[(int) Math.round(health)];
++    }
++
++    public static double horizontalDistance(double x1, double z1, double x2, double z2) {
++        double dist = horizontalDistanceSq(x1, z1, x2, z2);
++        return Math.sqrt(dist);
++    }
++
++    public static double horizontalDistanceSq(double x1, double z1, double x2, double z2) {
++        return (x2 - x1) * (x2 - x1) + (z2 - z1) * (z2 - z1);
++    }
++}
+diff --git a/src/main/java/com/jlmsz/util/color/HSVColor.java b/src/main/java/com/jlmsz/util/color/HSVColor.java
+new file mode 100644
+index 0000000..2338879
+--- /dev/null
++++ b/src/main/java/com/jlmsz/util/color/HSVColor.java
+@@ -0,0 +1,13 @@
++package com.jlmsz.util.color;
++
++public class HSVColor {
++    public float h;
++    public float s;
++    public float v;
++
++    public HSVColor(float h, float s, float v) {
++        this.h = h;
++        this.s = s;
++        this.v = v;
++    }
++}
+\ No newline at end of file
+diff --git a/src/main/java/com/jlmsz/util/hypixel/HypixelCurrentInfo.java b/src/main/java/com/jlmsz/util/hypixel/HypixelCurrentInfo.java
+new file mode 100644
+index 0000000..55f6a56
+--- /dev/null
++++ b/src/main/java/com/jlmsz/util/hypixel/HypixelCurrentInfo.java
+@@ -0,0 +1,7 @@
++package com.jlmsz.util.hypixel;
++
++public class HypixelCurrentInfo {
++    public String server;
++    public String gametype;
++    public String lobbyname;
++}
+diff --git a/src/main/java/com/jlmsz/util/hypixel/HypixelUtil.java b/src/main/java/com/jlmsz/util/hypixel/HypixelUtil.java
+new file mode 100644
+index 0000000..14faff1
+--- /dev/null
++++ b/src/main/java/com/jlmsz/util/hypixel/HypixelUtil.java
+@@ -0,0 +1,89 @@
++package com.jlmsz.util.hypixel;
++
++import com.google.gson.Gson;
++import com.google.gson.JsonSyntaxException;
++import com.jlmsz.JClient;
++import com.jlmsz.event.EventHandler;
++import com.jlmsz.event.impl.ChatReceivedEvent;
++import com.jlmsz.event.impl.WorldLoadEvent;
++import net.minecraft.client.Minecraft;
++
++import java.util.ArrayList;
++import java.util.List;
++
++public class HypixelUtil {
++
++    public static HypixelUtil instance;
++    private List<ICurrentInfoCallback> currentInfoCallbacks = new ArrayList<>();
++    private boolean waitingLocraw;
++    private HypixelCurrentInfo infoCache;
++
++    public static void init() {
++        if (instance != null) return;
++
++        JClient.EVENT_BUS.registerListener(instance = new HypixelUtil());
++    }
++
++    public boolean isCurrentServerHypixel() {
++        Minecraft mc = Minecraft.getMinecraft();
++        String ip = mc.getCurrentServerData().serverIP;
++        return ip != null && (ip.endsWith(".hypixel.net") || ip.equals("hypixel.net"));
++    }
++
++    @EventHandler
++    public void onWorldLoaded(WorldLoadEvent event) {
++        infoCache = null;
++        if (!isCurrentServerHypixel()) {
++            currentInfoCallbacks.clear();
++        }
++    }
++
++    @EventHandler
++    public void onChatReceived(ChatReceivedEvent event) {
++        System.out.println("Chatrecv: " + event.getComponent().getFormattedText());
++        String message = event.getComponent().getUnformattedText();
++        if (!message.startsWith("{")) {
++            return;
++        }
++
++        Gson gson = new Gson();
++        HypixelCurrentInfo info;
++        try {
++            info = gson.fromJson(message, HypixelCurrentInfo.class);
++            event.setCancelled(true);
++        } catch (JsonSyntaxException ex) {
++            ex.printStackTrace();
++            return;
++        }
++
++        System.out.println("PARSED");
++
++//        infoCache = info;
++        waitingLocraw = false;
++
++        for (ICurrentInfoCallback cb : currentInfoCallbacks) {
++            cb.onCurrentInfo(info);
++        }
++
++        currentInfoCallbacks.clear();
++    }
++
++    public void getCurrentInfo(ICurrentInfoCallback callback) {
++//        if (infoCache != null) {
++//            callback.onCurrentInfo(this.infoCache);
++//            return;
++//        }
++
++        Minecraft mc = Minecraft.getMinecraft();
++        if (mc.thePlayer == null || !isCurrentServerHypixel()) return;
++
++
++        currentInfoCallbacks.add(callback);
++
++//        if (!waitingLocraw) {
++            mc.thePlayer.sendChatMessage("/locraw");
++//        }
++    }
++
++
++}
+diff --git a/src/main/java/com/jlmsz/util/hypixel/ICurrentInfoCallback.java b/src/main/java/com/jlmsz/util/hypixel/ICurrentInfoCallback.java
+new file mode 100644
+index 0000000..efab157
+--- /dev/null
++++ b/src/main/java/com/jlmsz/util/hypixel/ICurrentInfoCallback.java
+@@ -0,0 +1,7 @@
++package com.jlmsz.util.hypixel;
++
++public interface ICurrentInfoCallback {
++
++    void onCurrentInfo(HypixelCurrentInfo info);
++
++}
+diff --git a/src/main/java/com/jlmsz/util/renderer/IItemRenderer.java b/src/main/java/com/jlmsz/util/renderer/IItemRenderer.java
+new file mode 100644
+index 0000000..c7c14a5
+--- /dev/null
++++ b/src/main/java/com/jlmsz/util/renderer/IItemRenderer.java
+@@ -0,0 +1,29 @@
++package com.jlmsz.util.renderer;
++
++import net.minecraft.client.renderer.block.model.ItemCameraTransforms;
++import net.minecraft.entity.EntityLivingBase;
++import net.minecraft.item.ItemStack;
++
++public interface IItemRenderer {
++
++    void renderItem(EntityLivingBase entityIn, ItemStack heldStack, ItemCameraTransforms.TransformType transform);
++
++    void renderItemInFirstPerson(float partialTicks);
++
++    /**
++     * Renders all the overlays that are in first person mode. Args: partialTickTime
++     */
++    void renderOverlays(float partialTicks);
++
++    void updateEquippedItem();
++
++    /**
++     * Resets equippedProgress
++     */
++    void resetEquippedProgress();
++
++    /**
++     * Resets equippedProgress
++     */
++    void resetEquippedProgress2();
++}
+diff --git a/src/main/java/com/jlmsz/util/renderer/IRenderManager.java b/src/main/java/com/jlmsz/util/renderer/IRenderManager.java
+new file mode 100644
+index 0000000..d4b2729
+--- /dev/null
++++ b/src/main/java/com/jlmsz/util/renderer/IRenderManager.java
+@@ -0,0 +1,78 @@
++package com.jlmsz.util.renderer;
++
++import net.minecraft.client.gui.FontRenderer;
++import net.minecraft.client.renderer.culling.ICamera;
++import net.minecraft.client.renderer.entity.Render;
++import net.minecraft.client.renderer.entity.RenderPlayer;
++import net.minecraft.client.renderer.texture.TextureManager;
++import net.minecraft.client.settings.GameSettings;
++import net.minecraft.entity.Entity;
++import net.minecraft.world.World;
++
++import java.util.Map;
++
++public interface IRenderManager {
++    void setRenderPosition(double renderPosXIn, double renderPosYIn, double renderPosZIn);
++
++    <T extends Entity> Render<T> getEntityClassRenderObject(Class<? extends Entity> entityClass);
++
++    <T extends Entity> Render<T> getEntityRenderObject(Entity entityIn);
++
++    void cacheActiveRenderInfo(World worldIn, FontRenderer textRendererIn, Entity livingPlayerIn, Entity pointedEntityIn, GameSettings optionsIn, float partialTicks);
++
++    void setPlayerViewY(float playerViewYIn);
++
++    boolean isRenderShadow();
++
++    void setRenderShadow(boolean renderShadowIn);
++
++    void setDebugBoundingBox(boolean debugBoundingBoxIn);
++
++    boolean isDebugBoundingBox();
++
++    boolean renderEntitySimple(Entity entityIn, float partialTicks);
++
++    boolean shouldRender(Entity entityIn, ICamera camera, double camX, double camY, double camZ);
++
++    boolean renderEntityStatic(Entity entity, float partialTicks, boolean hideDebugBox);
++
++    void renderWitherSkull(Entity entityIn, float partialTicks);
++
++    boolean renderEntityWithPosYaw(Entity entityIn, double x, double y, double z, float entityYaw, float partialTicks);
++
++    boolean doRenderEntity(Entity entity, double x, double y, double z, float entityYaw, float partialTicks, boolean hideDebugBox);
++
++    /**
++     * World sets this RenderManager's worldObj to the world provided
++     */
++    void set(World worldIn);
++
++    double getDistanceToCamera(double x, double y, double z);
++
++    /**
++     * Returns the font renderer
++     */
++    FontRenderer getFontRenderer();
++
++    void setRenderOutlines(boolean renderOutlinesIn);
++
++    Map<Class, Render> getEntityRenderMap();
++
++    void setEntityRenderMap(Map p_setEntityRenderMap_1_);
++
++    Map<String, RenderPlayer> getSkinMap();
++
++    TextureManager getRenderEngine();
++
++    Entity getPointedEntity();
++
++    Entity getLivingPlayer();
++
++    float getPlayerViewY();
++    float getPlayerViewX();
++
++    World getWorldObj();
++
++    GameSettings getOptions();
++    Render getRenderRender();
++}
+diff --git a/src/main/java/com/jlmsz/util/renderer/ItemRendererLegacy.java b/src/main/java/com/jlmsz/util/renderer/ItemRendererLegacy.java
+new file mode 100644
+index 0000000..4336f8c
+--- /dev/null
++++ b/src/main/java/com/jlmsz/util/renderer/ItemRendererLegacy.java
+@@ -0,0 +1,708 @@
++package com.jlmsz.util.renderer;
++
++import net.minecraft.block.Block;
++import net.minecraft.block.material.Material;
++import net.minecraft.block.state.IBlockState;
++import net.minecraft.client.Minecraft;
++import net.minecraft.client.entity.EntityPlayerSP;
++import net.minecraft.client.renderer.*;
++import net.minecraft.client.renderer.block.model.ItemCameraTransforms;
++import net.minecraft.client.renderer.entity.Render;
++import net.minecraft.client.renderer.entity.RenderItem;
++import net.minecraft.client.renderer.entity.RenderPlayer;
++import net.minecraft.client.renderer.texture.TextureAtlasSprite;
++import net.minecraft.client.renderer.texture.TextureMap;
++import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
++import net.minecraft.entity.EntityLivingBase;
++import net.minecraft.entity.player.EntityPlayer;
++import net.minecraft.init.Items;
++import net.minecraft.item.EnumAction;
++import net.minecraft.item.Item;
++import net.minecraft.item.ItemCloth;
++import net.minecraft.item.ItemStack;
++import net.minecraft.src.Config;
++import net.minecraft.util.BlockPos;
++import net.minecraft.util.EnumWorldBlockLayer;
++import net.minecraft.util.MathHelper;
++import net.minecraft.util.ResourceLocation;
++import net.minecraft.world.storage.MapData;
++import net.optifine.reflect.Reflector;
++import net.optifine.shaders.Shaders;
++import org.lwjgl.opengl.GL11;
++import org.lwjgl.opengl.GL12;
++
++public class ItemRendererLegacy implements IItemRenderer {
++    private static final ResourceLocation RES_ITEM_GLINT = new ResourceLocation("textures/misc/enchanted_item_glint.png");
++    private static final ResourceLocation RES_MAP_BACKGROUND = new ResourceLocation("textures/map/map_background.png");
++    private static final ResourceLocation RES_UNDERWATER_OVERLAY = new ResourceLocation("textures/misc/underwater.png");
++
++    /**
++     * A reference to the Minecraft object.
++     */
++    private Minecraft mc;
++    private ItemStack itemToRender;
++
++    /**
++     * How far the current item has been equipped (0 disequipped and 1 fully up)
++     */
++    private float equippedProgress;
++    private float prevEquippedProgress;
++//    private RenderBlocks renderBlocksIr = new RenderBlocks();
++
++    /**
++     * The index of the currently held item (0-8, or -1 if not yet updated)
++     */
++    private int equippedItemSlot = -1;
++    private final IRenderManager renderManager;
++    private final RenderItem itemRenderer;
++
++    public ItemRendererLegacy(Minecraft mc) {
++        this.mc = mc;
++        this.renderManager = mc.getRenderManager();
++        this.itemRenderer = mc.getRenderItem();
++    }
++
++    /**
++     * Returns true if given block is translucent
++     */
++    private boolean isBlockTranslucent(Block blockIn) {
++        return blockIn != null && blockIn.getBlockLayer() == EnumWorldBlockLayer.TRANSLUCENT;
++    }
++
++    /**
++     * Renders a texture that warps around based on the direction the player is looking. Texture needs to be bound
++     * before being called. Used for the water overlay. Args: parialTickTime
++     *
++     * @param partialTicks Partial ticks
++     */
++    private void renderWaterOverlayTexture(float partialTicks) {
++        if (!Config.isShaders() || Shaders.isUnderwaterOverlay()) {
++            this.mc.getTextureManager().bindTexture(RES_UNDERWATER_OVERLAY);
++            Tessellator tessellator = Tessellator.getInstance();
++            WorldRenderer worldrenderer = tessellator.getWorldRenderer();
++            float f = this.mc.thePlayer.getBrightness(partialTicks);
++            GlStateManager.color(f, f, f, 0.5F);
++            GlStateManager.enableBlend();
++            GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
++            GlStateManager.pushMatrix();
++            float f1 = 4.0F;
++            float f2 = -1.0F;
++            float f3 = 1.0F;
++            float f4 = -1.0F;
++            float f5 = 1.0F;
++            float f6 = -0.5F;
++            float f7 = -this.mc.thePlayer.rotationYaw / 64.0F;
++            float f8 = this.mc.thePlayer.rotationPitch / 64.0F;
++            worldrenderer.begin(7, DefaultVertexFormats.POSITION_TEX);
++            worldrenderer.pos(-1.0D, -1.0D, -0.5D).tex((double) (4.0F + f7), (double) (4.0F + f8)).endVertex();
++            worldrenderer.pos(1.0D, -1.0D, -0.5D).tex((double) (0.0F + f7), (double) (4.0F + f8)).endVertex();
++            worldrenderer.pos(1.0D, 1.0D, -0.5D).tex((double) (0.0F + f7), (double) (0.0F + f8)).endVertex();
++            worldrenderer.pos(-1.0D, 1.0D, -0.5D).tex((double) (4.0F + f7), (double) (0.0F + f8)).endVertex();
++            tessellator.draw();
++            GlStateManager.popMatrix();
++            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
++            GlStateManager.disableBlend();
++        }
++    }
++
++    /**
++     * Render the block in the player's hand
++     *
++     * @param partialTicks Partial ticks
++     * @param atlas        The TextureAtlasSprite to render
++     */
++    private void renderBlockInHand(float partialTicks, TextureAtlasSprite atlas) {
++        this.mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
++        Tessellator tessellator = Tessellator.getInstance();
++        WorldRenderer worldrenderer = tessellator.getWorldRenderer();
++        float f = 0.1F;
++        GlStateManager.color(0.1F, 0.1F, 0.1F, 0.5F);
++        GlStateManager.pushMatrix();
++        float f1 = -1.0F;
++        float f2 = 1.0F;
++        float f3 = -1.0F;
++        float f4 = 1.0F;
++        float f5 = -0.5F;
++        float f6 = atlas.getMinU();
++        float f7 = atlas.getMaxU();
++        float f8 = atlas.getMinV();
++        float f9 = atlas.getMaxV();
++        worldrenderer.begin(7, DefaultVertexFormats.POSITION_TEX);
++        worldrenderer.pos(-1.0D, -1.0D, -0.5D).tex((double) f7, (double) f9).endVertex();
++        worldrenderer.pos(1.0D, -1.0D, -0.5D).tex((double) f6, (double) f9).endVertex();
++        worldrenderer.pos(1.0D, 1.0D, -0.5D).tex((double) f6, (double) f8).endVertex();
++        worldrenderer.pos(-1.0D, 1.0D, -0.5D).tex((double) f7, (double) f8).endVertex();
++        tessellator.draw();
++        GlStateManager.popMatrix();
++        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
++    }
++
++    /**
++     * Renders the item stack for being in an entity's hand Args: itemStack
++     */
++    public void renderItem(EntityLivingBase entityIn, ItemStack heldStack, ItemCameraTransforms.TransformType transform) {
++        if (heldStack != null) {
++            Item item = heldStack.getItem();
++            Block block = Block.getBlockFromItem(item);
++            GlStateManager.pushMatrix();
++
++            if (this.itemRenderer.shouldRenderItemIn3D(heldStack)) {
++                GlStateManager.scale(2.0F, 2.0F, 2.0F);
++
++                if (this.isBlockTranslucent(block) && (!Config.isShaders() || !Shaders.renderItemKeepDepthMask)) {
++                    GlStateManager.depthMask(false);
++                }
++            }
++
++            this.itemRenderer.renderItemModelForEntity(heldStack, entityIn, transform);
++
++            if (this.isBlockTranslucent(block)) {
++                GlStateManager.depthMask(true);
++            }
++
++            GlStateManager.popMatrix();
++        }
++    }
++
++//    /**
++//     * Renders an item held in hand as a 2D texture with thickness
++//     */
++//    public static void renderItemIn2D(Tessellator p_78439_0_, float p_78439_1_, float p_78439_2_, float p_78439_3_, float p_78439_4_, int p_78439_5_, int p_78439_6_, float p_78439_7_)
++//    {
++//        p_78439_0_.startDrawingQuads();
++//        p_78439_0_.setNormal(0.0F, 0.0F, 1.0F);
++//        p_78439_0_.addVertexWithUV(0.0D, 0.0D, 0.0D, (double)p_78439_1_, (double)p_78439_4_);
++//        p_78439_0_.addVertexWithUV(1.0D, 0.0D, 0.0D, (double)p_78439_3_, (double)p_78439_4_);
++//        p_78439_0_.addVertexWithUV(1.0D, 1.0D, 0.0D, (double)p_78439_3_, (double)p_78439_2_);
++//        p_78439_0_.addVertexWithUV(0.0D, 1.0D, 0.0D, (double)p_78439_1_, (double)p_78439_2_);
++//        p_78439_0_.draw();
++//        p_78439_0_.startDrawingQuads();
++//        p_78439_0_.setNormal(0.0F, 0.0F, -1.0F);
++//        p_78439_0_.addVertexWithUV(0.0D, 1.0D, (double)(0.0F - p_78439_7_), (double)p_78439_1_, (double)p_78439_2_);
++//        p_78439_0_.addVertexWithUV(1.0D, 1.0D, (double)(0.0F - p_78439_7_), (double)p_78439_3_, (double)p_78439_2_);
++//        p_78439_0_.addVertexWithUV(1.0D, 0.0D, (double)(0.0F - p_78439_7_), (double)p_78439_3_, (double)p_78439_4_);
++//        p_78439_0_.addVertexWithUV(0.0D, 0.0D, (double)(0.0F - p_78439_7_), (double)p_78439_1_, (double)p_78439_4_);
++//        p_78439_0_.draw();
++//        float var8 = 0.5F * (p_78439_1_ - p_78439_3_) / (float)p_78439_5_;
++//        float var9 = 0.5F * (p_78439_4_ - p_78439_2_) / (float)p_78439_6_;
++//        p_78439_0_.startDrawingQuads();
++//        p_78439_0_.setNormal(-1.0F, 0.0F, 0.0F);
++//        int var10;
++//        float var11;
++//        float var12;
++//
++//        for (var10 = 0; var10 < p_78439_5_; ++var10)
++//        {
++//            var11 = (float)var10 / (float)p_78439_5_;
++//            var12 = p_78439_1_ + (p_78439_3_ - p_78439_1_) * var11 - var8;
++//            p_78439_0_.addVertexWithUV((double)var11, 0.0D, (double)(0.0F - p_78439_7_), (double)var12, (double)p_78439_4_);
++//            p_78439_0_.addVertexWithUV((double)var11, 0.0D, 0.0D, (double)var12, (double)p_78439_4_);
++//            p_78439_0_.addVertexWithUV((double)var11, 1.0D, 0.0D, (double)var12, (double)p_78439_2_);
++//            p_78439_0_.addVertexWithUV((double)var11, 1.0D, (double)(0.0F - p_78439_7_), (double)var12, (double)p_78439_2_);
++//        }
++//
++//        p_78439_0_.draw();
++//        p_78439_0_.startDrawingQuads();
++//        p_78439_0_.setNormal(1.0F, 0.0F, 0.0F);
++//        float var13;
++//
++//        for (var10 = 0; var10 < p_78439_5_; ++var10)
++//        {
++//            var11 = (float)var10 / (float)p_78439_5_;
++//            var12 = p_78439_1_ + (p_78439_3_ - p_78439_1_) * var11 - var8;
++//            var13 = var11 + 1.0F / (float)p_78439_5_;
++//            p_78439_0_.addVertexWithUV((double)var13, 1.0D, (double)(0.0F - p_78439_7_), (double)var12, (double)p_78439_2_);
++//            p_78439_0_.addVertexWithUV((double)var13, 1.0D, 0.0D, (double)var12, (double)p_78439_2_);
++//            p_78439_0_.addVertexWithUV((double)var13, 0.0D, 0.0D, (double)var12, (double)p_78439_4_);
++//            p_78439_0_.addVertexWithUV((double)var13, 0.0D, (double)(0.0F - p_78439_7_), (double)var12, (double)p_78439_4_);
++//        }
++//
++//        p_78439_0_.draw();
++//        p_78439_0_.startDrawingQuads();
++//        p_78439_0_.setNormal(0.0F, 1.0F, 0.0F);
++//
++//        for (var10 = 0; var10 < p_78439_6_; ++var10)
++//        {
++//            var11 = (float)var10 / (float)p_78439_6_;
++//            var12 = p_78439_4_ + (p_78439_2_ - p_78439_4_) * var11 - var9;
++//            var13 = var11 + 1.0F / (float)p_78439_6_;
++//            p_78439_0_.addVertexWithUV(0.0D, (double)var13, 0.0D, (double)p_78439_1_, (double)var12);
++//            p_78439_0_.addVertexWithUV(1.0D, (double)var13, 0.0D, (double)p_78439_3_, (double)var12);
++//            p_78439_0_.addVertexWithUV(1.0D, (double)var13, (double)(0.0F - p_78439_7_), (double)p_78439_3_, (double)var12);
++//            p_78439_0_.addVertexWithUV(0.0D, (double)var13, (double)(0.0F - p_78439_7_), (double)p_78439_1_, (double)var12);
++//        }
++//
++//        p_78439_0_.draw();
++//        p_78439_0_.startDrawingQuads();
++//        p_78439_0_.setNormal(0.0F, -1.0F, 0.0F);
++//
++//        for (var10 = 0; var10 < p_78439_6_; ++var10)
++//        {
++//            var11 = (float)var10 / (float)p_78439_6_;
++//            var12 = p_78439_4_ + (p_78439_2_ - p_78439_4_) * var11 - var9;
++//            p_78439_0_.addVertexWithUV(1.0D, (double)var11, 0.0D, (double)p_78439_3_, (double)var12);
++//            p_78439_0_.addVertexWithUV(0.0D, (double)var11, 0.0D, (double)p_78439_1_, (double)var12);
++//            p_78439_0_.addVertexWithUV(0.0D, (double)var11, (double)(0.0F - p_78439_7_), (double)p_78439_1_, (double)var12);
++//            p_78439_0_.addVertexWithUV(1.0D, (double)var11, (double)(0.0F - p_78439_7_), (double)p_78439_3_, (double)var12);
++//        }
++//
++//        p_78439_0_.draw();
++//    }
++
++    /**
++     * Renders the active item in the player's hand when in first person mode. Args: partialTickTime
++     */
++    public void renderItemInFirstPerson(float p_78440_1_) {
++        float var2 = this.prevEquippedProgress + (this.equippedProgress - this.prevEquippedProgress) * p_78440_1_;
++        EntityPlayerSP var3 = this.mc.thePlayer;
++        float var4 = var3.prevRotationPitch + (var3.rotationPitch - var3.prevRotationPitch) * p_78440_1_;
++        GL11.glPushMatrix();
++        GL11.glRotatef(var4, 1.0F, 0.0F, 0.0F);
++        GL11.glRotatef(var3.prevRotationYaw + (var3.rotationYaw - var3.prevRotationYaw) * p_78440_1_, 0.0F, 1.0F, 0.0F);
++        RenderHelper.enableStandardItemLighting();
++        GL11.glPopMatrix();
++        EntityPlayerSP var5 = (EntityPlayerSP) var3;
++        float var6 = var5.prevRenderArmPitch + (var5.renderArmPitch - var5.prevRenderArmPitch) * p_78440_1_;
++        float var7 = var5.prevRenderArmYaw + (var5.renderArmYaw - var5.prevRenderArmYaw) * p_78440_1_;
++        GL11.glRotatef((var3.rotationPitch - var6) * 0.1F, 1.0F, 0.0F, 0.0F);
++        GL11.glRotatef((var3.rotationYaw - var7) * 0.1F, 0.0F, 1.0F, 0.0F);
++        ItemStack var8 = this.itemToRender;
++
++        if (var8 != null && var8.getItem() instanceof ItemCloth) {
++            GL11.glEnable(GL11.GL_BLEND);
++            OpenGlHelper.glBlendFunc(770, 771, 1, 0);
++        }
++
++        int var9 = this.mc.theWorld.getCombinedLight(new BlockPos(MathHelper.floor_double(var3.posX), MathHelper.floor_double(var3.posY), MathHelper.floor_double(var3.posZ)), 0);
++        int var10 = var9 % 65536;
++        int var11 = var9 / 65536;
++        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, (float) var10 / 1.0F, (float) var11 / 1.0F);
++        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
++        float var13;
++        float var14;
++        float var15;
++
++        if (var8 != null) {
++            int var12 = var8.getItem().getColorFromItemStack(var8, 0);
++            var13 = (float) (var12 >> 16 & 255) / 255.0F;
++            var14 = (float) (var12 >> 8 & 255) / 255.0F;
++            var15 = (float) (var12 & 255) / 255.0F;
++            GL11.glColor4f(var13, var14, var15, 1.0F);
++        } else {
++            GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
++        }
++
++        float var16;
++        float var17;
++        float var18;
++        float var22;
++        Render var26;
++        RenderPlayer var29;
++
++        if (var8 != null && var8.getItem() == Items.filled_map) {
++            GL11.glPushMatrix();
++            var22 = 0.8F;
++            var13 = var3.getSwingProgress(p_78440_1_);
++            var14 = MathHelper.sin(var13 * (float) Math.PI);
++            var15 = MathHelper.sin(MathHelper.sqrt_float(var13) * (float) Math.PI);
++            GL11.glTranslatef(-var15 * 0.4F, MathHelper.sin(MathHelper.sqrt_float(var13) * (float) Math.PI * 2.0F) * 0.2F, -var14 * 0.2F);
++            var13 = 1.0F - var4 / 45.0F + 0.1F;
++
++            if (var13 < 0.0F) {
++                var13 = 0.0F;
++            }
++
++            if (var13 > 1.0F) {
++                var13 = 1.0F;
++            }
++
++            var13 = -MathHelper.cos(var13 * (float) Math.PI) * 0.5F + 0.5F;
++            GL11.glTranslatef(0.0F, 0.0F * var22 - (1.0F - var2) * 1.2F - var13 * 0.5F + 0.04F, -0.9F * var22);
++            GL11.glRotatef(90.0F, 0.0F, 1.0F, 0.0F);
++            GL11.glRotatef(var13 * -85.0F, 0.0F, 0.0F, 1.0F);
++            GL11.glEnable(GL12.GL_RESCALE_NORMAL);
++            this.mc.getTextureManager().bindTexture(var3.getLocationSkin());
++
++            for (int var24 = 0; var24 < 2; ++var24) {
++                int var25 = var24 * 2 - 1;
++                GL11.glPushMatrix();
++                GL11.glTranslatef(-0.0F, -0.6F, 1.1F * (float) var25);
++                GL11.glRotatef((float) (-45 * var25), 1.0F, 0.0F, 0.0F);
++                GL11.glRotatef(-90.0F, 0.0F, 0.0F, 1.0F);
++                GL11.glRotatef(59.0F, 0.0F, 0.0F, 1.0F);
++                GL11.glRotatef((float) (-65 * var25), 0.0F, 1.0F, 0.0F);
++                var26 = renderManager.getEntityRenderObject(this.mc.thePlayer);
++                var29 = (RenderPlayer) var26;
++                var18 = 1.0F;
++                GL11.glScalef(var18, var18, var18);
++                var29.renderRightArm(this.mc.thePlayer); // TODO: support left handed
++                GL11.glPopMatrix();
++            }
++
++            var14 = var3.getSwingProgress(p_78440_1_);
++            var15 = MathHelper.sin(var14 * var14 * (float) Math.PI);
++            var16 = MathHelper.sin(MathHelper.sqrt_float(var14) * (float) Math.PI);
++            GL11.glRotatef(-var15 * 20.0F, 0.0F, 1.0F, 0.0F);
++            GL11.glRotatef(-var16 * 20.0F, 0.0F, 0.0F, 1.0F);
++            GL11.glRotatef(-var16 * 80.0F, 1.0F, 0.0F, 0.0F);
++            var17 = 0.38F;
++            GL11.glScalef(var17, var17, var17);
++            GL11.glRotatef(90.0F, 0.0F, 1.0F, 0.0F);
++            GL11.glRotatef(180.0F, 0.0F, 0.0F, 1.0F);
++            GL11.glTranslatef(-1.0F, -1.0F, 0.0F);
++            var18 = 0.015625F;
++            GL11.glScalef(var18, var18, var18);
++            this.mc.getTextureManager().bindTexture(RES_MAP_BACKGROUND);
++            Tessellator tessellator = Tessellator.getInstance();
++            WorldRenderer renderer = tessellator.getWorldRenderer();
++            GL11.glNormal3f(0.0F, 0.0F, -1.0F);
++            renderer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
++            byte var31 = 7;
++            renderer.pos((double) (0 - var31), (double) (128 + var31), 0.0D).tex(0.0D, 1.0D);
++            renderer.pos((double) (128 + var31), (double) (128 + var31), 0.0D).tex(1.0D, 1.0D);
++            renderer.pos((double) (128 + var31), (double) (0 - var31), 0.0D).tex(1.0D, 0.0D);
++            renderer.pos((double) (0 - var31), (double) (0 - var31), 0.0D).tex(0.0D, 0.0D);
++            tessellator.draw();
++            MapData var21 = Items.filled_map.getMapData(var8, this.mc.theWorld);
++
++            if (var21 != null) {
++                this.mc.entityRenderer.getMapItemRenderer().renderMap(var21, false);
++            }
++
++            GL11.glPopMatrix();
++        } else if (var8 != null) {
++            GL11.glPushMatrix();
++            var22 = 0.8F;
++
++            if (var3.getItemInUseCount() > 0) {
++                EnumAction var23 = var8.getItemUseAction();
++
++                if (var23 == EnumAction.EAT || var23 == EnumAction.DRINK) {
++                    var14 = (float) var3.getItemInUseCount() - p_78440_1_ + 1.0F;
++                    var15 = 1.0F - var14 / (float) var8.getMaxItemUseDuration();
++                    var16 = 1.0F - var15;
++                    var16 = var16 * var16 * var16;
++                    var16 = var16 * var16 * var16;
++                    var16 = var16 * var16 * var16;
++                    var17 = 1.0F - var16;
++                    GL11.glTranslatef(0.0F, MathHelper.abs(MathHelper.cos(var14 / 4.0F * (float) Math.PI) * 0.1F) * (float) ((double) var15 > 0.2D ? 1 : 0), 0.0F);
++                    GL11.glTranslatef(var17 * 0.6F, -var17 * 0.5F, 0.0F);
++                    GL11.glRotatef(var17 * 90.0F, 0.0F, 1.0F, 0.0F);
++                    GL11.glRotatef(var17 * 10.0F, 1.0F, 0.0F, 0.0F);
++                    GL11.glRotatef(var17 * 30.0F, 0.0F, 0.0F, 1.0F);
++                }
++            } else {
++                var13 = var3.getSwingProgress(p_78440_1_);
++                var14 = MathHelper.sin(var13 * (float) Math.PI);
++                var15 = MathHelper.sin(MathHelper.sqrt_float(var13) * (float) Math.PI);
++                GL11.glTranslatef(-var15 * 0.4F, MathHelper.sin(MathHelper.sqrt_float(var13) * (float) Math.PI * 2.0F) * 0.2F, -var14 * 0.2F);
++            }
++
++            GL11.glTranslatef(0.7F * var22 - 0.02F, -0.65F * var22 - (1.0F - var2) * 0.6F - 0.005F, -0.9F * var22);
++            GL11.glRotatef(50.0F, 0.0F, 1.0F, 0.0F);
++            GL11.glEnable(GL12.GL_RESCALE_NORMAL);
++            var13 = var3.getSwingProgress(p_78440_1_);
++            var14 = MathHelper.sin(var13 * var13 * (float) Math.PI);
++            var15 = MathHelper.sin(MathHelper.sqrt_float(var13) * (float) Math.PI);
++            GL11.glRotatef(-var14 * 20.0F, 0.0F, 1.0F, 0.0F);
++            GL11.glRotatef(-var15 * 20.0F, 0.0F, 0.0F, 1.0F);
++            GL11.glRotatef(-var15 * 80.0F, 1.0F, 0.0F, 0.0F);
++            var16 = 0.4F;
++            GL11.glScalef(var16, var16, var16);
++            float var19;
++            float var20;
++
++            if (var3.getItemInUseCount() > 0) {
++                EnumAction var27 = var8.getItemUseAction();
++
++                if (var27 == EnumAction.BLOCK) {
++                    GL11.glTranslatef(-0.5F, 0.2F, 0.0F);
++                    GL11.glRotatef(30.0F, 0.0F, 1.0F, 0.0F);
++                    GL11.glRotatef(-80.0F, 1.0F, 0.0F, 0.0F);
++                    GL11.glRotatef(60.0F, 0.0F, 1.0F, 0.0F);
++                } else if (var27 == EnumAction.BOW) {
++                    GL11.glRotatef(-18.0F, 0.0F, 0.0F, 1.0F);
++                    GL11.glRotatef(-12.0F, 0.0F, 1.0F, 0.0F);
++                    GL11.glRotatef(-8.0F, 1.0F, 0.0F, 0.0F);
++                    GL11.glTranslatef(-0.9F, 0.2F, 0.0F);
++                    var18 = (float) var8.getMaxItemUseDuration() - ((float) var3.getItemInUseCount() - p_78440_1_ + 1.0F);
++                    var19 = var18 / 20.0F;
++                    var19 = (var19 * var19 + var19 * 2.0F) / 3.0F;
++
++                    if (var19 > 1.0F) {
++                        var19 = 1.0F;
++                    }
++
++                    if (var19 > 0.1F) {
++                        GL11.glTranslatef(0.0F, MathHelper.sin((var18 - 0.1F) * 1.3F) * 0.01F * (var19 - 0.1F), 0.0F);
++                    }
++
++                    GL11.glTranslatef(0.0F, 0.0F, var19 * 0.1F);
++                    GL11.glRotatef(-335.0F, 0.0F, 0.0F, 1.0F);
++                    GL11.glRotatef(-50.0F, 0.0F, 1.0F, 0.0F);
++                    GL11.glTranslatef(0.0F, 0.5F, 0.0F);
++                    var20 = 1.0F + var19 * 0.2F;
++                    GL11.glScalef(1.0F, 1.0F, var20);
++                    GL11.glTranslatef(0.0F, -0.5F, 0.0F);
++                    GL11.glRotatef(50.0F, 0.0F, 1.0F, 0.0F);
++                    GL11.glRotatef(335.0F, 0.0F, 0.0F, 1.0F);
++                }
++            }
++
++            if (var8.getItem().shouldRotateAroundWhenRendering()) {
++                GL11.glRotatef(180.0F, 0.0F, 1.0F, 0.0F);
++            }
++
++//            if (var8.getItem().requiresMultipleRenderPasses()) {
++//                this.renderItem(var3, var8, 0);
++//                int var28 = var8.getItem().getColorFromItemStack(var8, 1);
++//                var18 = (float) (var28 >> 16 & 255) / 255.0F;
++//                var19 = (float) (var28 >> 8 & 255) / 255.0F;
++//                var20 = (float) (var28 & 255) / 255.0F;
++//                GL11.glColor4f(1.0F * var18, 1.0F * var19, 1.0F * var20, 1.0F);
++//                this.renderItem(var3, var8, 1);
++//            } else {
++            this.renderItem(var3, var8, ItemCameraTransforms.TransformType.FIRST_PERSON); // TODO: is this first person?
++//            }
++
++            GL11.glPopMatrix();
++        } else if (!var3.isInvisible()) {
++            GL11.glPushMatrix();
++            var22 = 0.8F;
++            var13 = var3.getSwingProgress(p_78440_1_);
++            var14 = MathHelper.sin(var13 * (float) Math.PI);
++            var15 = MathHelper.sin(MathHelper.sqrt_float(var13) * (float) Math.PI);
++            GL11.glTranslatef(-var15 * 0.3F, MathHelper.sin(MathHelper.sqrt_float(var13) * (float) Math.PI * 2.0F) * 0.4F, -var14 * 0.4F);
++            GL11.glTranslatef(0.8F * var22, -0.75F * var22 - (1.0F - var2) * 0.6F, -0.9F * var22);
++            GL11.glRotatef(45.0F, 0.0F, 1.0F, 0.0F);
++            GL11.glEnable(GL12.GL_RESCALE_NORMAL);
++            var13 = var3.getSwingProgress(p_78440_1_);
++            var14 = MathHelper.sin(var13 * var13 * (float) Math.PI);
++            var15 = MathHelper.sin(MathHelper.sqrt_float(var13) * (float) Math.PI);
++            GL11.glRotatef(var15 * 70.0F, 0.0F, 1.0F, 0.0F);
++            GL11.glRotatef(-var14 * 20.0F, 0.0F, 0.0F, 1.0F);
++            this.mc.getTextureManager().bindTexture(var3.getLocationSkin());
++            GL11.glTranslatef(-1.0F, 3.6F, 3.5F);
++            GL11.glRotatef(120.0F, 0.0F, 0.0F, 1.0F);
++            GL11.glRotatef(200.0F, 1.0F, 0.0F, 0.0F);
++            GL11.glRotatef(-135.0F, 0.0F, 1.0F, 0.0F);
++            GL11.glScalef(1.0F, 1.0F, 1.0F);
++            GL11.glTranslatef(5.6F, 0.0F, 0.0F);
++            var26 = renderManager.getEntityRenderObject(this.mc.thePlayer);
++            var29 = (RenderPlayer) var26;
++            var18 = 1.0F;
++            GL11.glScalef(var18, var18, var18);
++            var29.renderRightArm(this.mc.thePlayer); //TODO: left handed
++            GL11.glPopMatrix();
++        }
++
++        if (var8 != null && var8.getItem() instanceof ItemCloth) {
++            GL11.glDisable(GL11.GL_BLEND);
++        }
++
++        GL11.glDisable(GL12.GL_RESCALE_NORMAL);
++        RenderHelper.disableStandardItemLighting();
++    }
++
++    /**
++     * Renders all the overlays that are in first person mode. Args: partialTickTime
++     */
++    public void renderOverlays(float partialTicks) {
++        GlStateManager.disableAlpha();
++
++        if (this.mc.thePlayer.isEntityInsideOpaqueBlock()) {
++            IBlockState iblockstate = this.mc.theWorld.getBlockState(new BlockPos(this.mc.thePlayer));
++            BlockPos blockpos = new BlockPos(this.mc.thePlayer);
++            EntityPlayer entityplayer = this.mc.thePlayer;
++
++            for (int i = 0; i < 8; ++i) {
++                double d0 = entityplayer.posX + (double) (((float) ((i >> 0) % 2) - 0.5F) * entityplayer.width * 0.8F);
++                double d1 = entityplayer.posY + (double) (((float) ((i >> 1) % 2) - 0.5F) * 0.1F);
++                double d2 = entityplayer.posZ + (double) (((float) ((i >> 2) % 2) - 0.5F) * entityplayer.width * 0.8F);
++                BlockPos blockpos1 = new BlockPos(d0, d1 + (double) entityplayer.getEyeHeight(), d2);
++                IBlockState iblockstate1 = this.mc.theWorld.getBlockState(blockpos1);
++
++                if (iblockstate1.getBlock().isVisuallyOpaque()) {
++                    iblockstate = iblockstate1;
++                    blockpos = blockpos1;
++                }
++            }
++
++            if (iblockstate.getBlock().getRenderType() != -1) {
++                Object object = Reflector.getFieldValue(Reflector.RenderBlockOverlayEvent_OverlayType_BLOCK);
++
++                if (!Reflector.callBoolean(Reflector.ForgeEventFactory_renderBlockOverlay, new Object[]{this.mc.thePlayer, Float.valueOf(partialTicks), object, iblockstate, blockpos})) {
++                    this.renderBlockInHand(partialTicks, this.mc.getBlockRendererDispatcher().getBlockModelShapes().getTexture(iblockstate));
++                }
++            }
++        }
++
++        if (!this.mc.thePlayer.isSpectator()) {
++            if (this.mc.thePlayer.isInsideOfMaterial(Material.water) && !Reflector.callBoolean(Reflector.ForgeEventFactory_renderWaterOverlay, new Object[]{this.mc.thePlayer, Float.valueOf(partialTicks)})) {
++                this.renderWaterOverlayTexture(partialTicks);
++            }
++
++            if (this.mc.thePlayer.isBurning() && !Reflector.callBoolean(Reflector.ForgeEventFactory_renderFireOverlay, new Object[]{this.mc.thePlayer, Float.valueOf(partialTicks)})) {
++                this.renderFireInFirstPerson(partialTicks);
++            }
++        }
++
++        GlStateManager.enableAlpha();
++    }
++
++//    /**
++//     * Renders the texture of the block the player is inside as an overlay. Args: partialTickTime, blockTextureIndex
++//     */
++//    private void renderInsideOfBlock(float p_78446_1_, IIcon p_78446_2_)
++//    {
++//        this.mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
++//        Tessellator var3 = Tessellator.instance;
++//        float var4 = 0.1F;
++//        GL11.glColor4f(var4, var4, var4, 0.5F);
++//        GL11.glPushMatrix();
++//        float var5 = -1.0F;
++//        float var6 = 1.0F;
++//        float var7 = -1.0F;
++//        float var8 = 1.0F;
++//        float var9 = -0.5F;
++//        float var10 = p_78446_2_.getMinU();
++//        float var11 = p_78446_2_.getMaxU();
++//        float var12 = p_78446_2_.getMinV();
++//        float var13 = p_78446_2_.getMaxV();
++//        var3.startDrawingQuads();
++//        var3.addVertexWithUV((double)var5, (double)var7, (double)var9, (double)var11, (double)var13);
++//        var3.addVertexWithUV((double)var6, (double)var7, (double)var9, (double)var10, (double)var13);
++//        var3.addVertexWithUV((double)var6, (double)var8, (double)var9, (double)var10, (double)var12);
++//        var3.addVertexWithUV((double)var5, (double)var8, (double)var9, (double)var11, (double)var12);
++//        var3.draw();
++//        GL11.glPopMatrix();
++//        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
++//    }
++
++//    /**
++//     * Renders a texture that warps around based on the direction the player is looking. Texture needs to be bound
++//     * before being called. Used for the water overlay. Args: parialTickTime
++//     */
++//    private void renderWarpedTextureOverlay(float p_78448_1_)
++//    {
++//        this.mc.getTextureManager().bindTexture(RES_UNDERWATER_OVERLAY);
++//        Tessellator var2 = Tessellator.instance;
++//        float var3 = this.mc.thePlayer.getBrightness(p_78448_1_);
++//        GL11.glColor4f(var3, var3, var3, 0.5F);
++//        GL11.glEnable(GL11.GL_BLEND);
++//        OpenGlHelper.glBlendFunc(770, 771, 1, 0);
++//        GL11.glPushMatrix();
++//        float var4 = 4.0F;
++//        float var5 = -1.0F;
++//        float var6 = 1.0F;
++//        float var7 = -1.0F;
++//        float var8 = 1.0F;
++//        float var9 = -0.5F;
++//        float var10 = -this.mc.thePlayer.rotationYaw / 64.0F;
++//        float var11 = this.mc.thePlayer.rotationPitch / 64.0F;
++//        var2.startDrawingQuads();
++//        var2.addVertexWithUV((double)var5, (double)var7, (double)var9, (double)(var4 + var10), (double)(var4 + var11));
++//        var2.addVertexWithUV((double)var6, (double)var7, (double)var9, (double)(0.0F + var10), (double)(var4 + var11));
++//        var2.addVertexWithUV((double)var6, (double)var8, (double)var9, (double)(0.0F + var10), (double)(0.0F + var11));
++//        var2.addVertexWithUV((double)var5, (double)var8, (double)var9, (double)(var4 + var10), (double)(0.0F + var11));
++//        var2.draw();
++//        GL11.glPopMatrix();
++//        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
++//        GL11.glDisable(GL11.GL_BLEND);
++//    }
++
++    /**
++     * Renders the fire on the screen for first person mode. Arg: partialTickTime
++     *
++     * @param partialTicks Partial ticks
++     */
++    private void renderFireInFirstPerson(float partialTicks) {
++        Tessellator tessellator = Tessellator.getInstance();
++        WorldRenderer worldrenderer = tessellator.getWorldRenderer();
++        GlStateManager.color(1.0F, 1.0F, 1.0F, 0.9F);
++        GlStateManager.depthFunc(519);
++        GlStateManager.depthMask(false);
++        GlStateManager.enableBlend();
++        GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
++        float f = 1.0F;
++
++        for (int i = 0; i < 2; ++i) {
++            GlStateManager.pushMatrix();
++            TextureAtlasSprite textureatlassprite = this.mc.getTextureMapBlocks().getAtlasSprite("minecraft:blocks/fire_layer_1");
++            this.mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
++            float f1 = textureatlassprite.getMinU();
++            float f2 = textureatlassprite.getMaxU();
++            float f3 = textureatlassprite.getMinV();
++            float f4 = textureatlassprite.getMaxV();
++            float f5 = (0.0F - f) / 2.0F;
++            float f6 = f5 + f;
++            float f7 = 0.0F - f / 2.0F;
++            float f8 = f7 + f;
++            float f9 = -0.5F;
++            GlStateManager.translate((float) (-(i * 2 - 1)) * 0.24F, -0.3F, 0.0F);
++            GlStateManager.rotate((float) (i * 2 - 1) * 10.0F, 0.0F, 1.0F, 0.0F);
++            worldrenderer.begin(7, DefaultVertexFormats.POSITION_TEX);
++            worldrenderer.setSprite(textureatlassprite);
++            worldrenderer.pos((double) f5, (double) f7, (double) f9).tex((double) f2, (double) f4).endVertex();
++            worldrenderer.pos((double) f6, (double) f7, (double) f9).tex((double) f1, (double) f4).endVertex();
++            worldrenderer.pos((double) f6, (double) f8, (double) f9).tex((double) f1, (double) f3).endVertex();
++            worldrenderer.pos((double) f5, (double) f8, (double) f9).tex((double) f2, (double) f3).endVertex();
++            tessellator.draw();
++            GlStateManager.popMatrix();
++        }
++
++        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
++        GlStateManager.disableBlend();
++        GlStateManager.depthMask(true);
++        GlStateManager.depthFunc(515);
++    }
++
++    public void updateEquippedItem() {
++        this.prevEquippedProgress = this.equippedProgress;
++        EntityPlayerSP var1 = this.mc.thePlayer;
++        ItemStack var2 = var1.inventory.getCurrentItem();
++        boolean var3 = this.equippedItemSlot == var1.inventory.currentItem && var2 == this.itemToRender;
++
++        if (this.itemToRender == null && var2 == null) {
++            var3 = true;
++        }
++
++        if (var2 != null && this.itemToRender != null && var2 != this.itemToRender && var2.getItem() == this.itemToRender.getItem() && var2.getItemDamage() == this.itemToRender.getItemDamage()) {
++            this.itemToRender = var2;
++            var3 = true;
++        }
++
++        float var4 = 0.4F;
++        float var5 = var3 ? 1.0F : 0.0F;
++        float var6 = var5 - this.equippedProgress;
++
++        if (var6 < -var4) {
++            var6 = -var4;
++        }
++
++        if (var6 > var4) {
++            var6 = var4;
++        }
++
++        this.equippedProgress += var6;
++
++        if (this.equippedProgress < 0.1F) {
++            this.itemToRender = var2;
++            this.equippedItemSlot = var1.inventory.currentItem;
++        }
++    }
++
++    /**
++     * Resets equippedProgress
++     */
++    public void resetEquippedProgress() {
++        this.equippedProgress = 0.0F;
++    }
++
++    /**
++     * Resets equippedProgress
++     */
++    public void resetEquippedProgress2() {
++        this.equippedProgress = 0.0F;
++    }
++}
+diff --git a/src/main/java/com/jlmsz/util/renderer/ItemRendererProxy.java b/src/main/java/com/jlmsz/util/renderer/ItemRendererProxy.java
+new file mode 100644
+index 0000000..cb59859
+--- /dev/null
++++ b/src/main/java/com/jlmsz/util/renderer/ItemRendererProxy.java
+@@ -0,0 +1,90 @@
++package com.jlmsz.util.renderer;
++
++import com.jlmsz.module.ModuleRegistry;
++import com.jlmsz.module.impl.OldCombatModule;
++import net.minecraft.client.Minecraft;
++import net.minecraft.client.renderer.ItemRenderer;
++import net.minecraft.client.renderer.block.model.ItemCameraTransforms;
++import net.minecraft.entity.EntityLivingBase;
++import net.minecraft.item.ItemStack;
++
++public class ItemRendererProxy implements IItemRenderer {
++
++    private final ItemRenderer itemRenderer;
++    private final ItemRendererLegacy legacyRenderer;
++    private OldCombatModule module;
++
++    public ItemRendererProxy(Minecraft mc) {
++        itemRenderer = new ItemRenderer(mc);
++        legacyRenderer = new ItemRendererLegacy(mc);
++    }
++
++    private OldCombatModule getModule() {
++        if (module == null) {
++            module = ModuleRegistry.getModuleByClass(OldCombatModule.class);
++        }
++
++        return module;
++    }
++
++
++    @Override
++    public void renderItem(EntityLivingBase entityIn, ItemStack heldStack, ItemCameraTransforms.TransformType transform) {
++        OldCombatModule module = getModule();
++        if (module.isEnabled() && module.oldAnimations.getValue()) {
++            legacyRenderer.renderItem(entityIn, heldStack, transform);
++        } else {
++            itemRenderer.renderItem(entityIn, heldStack, transform);
++        }
++    }
++
++    @Override
++    public void renderItemInFirstPerson(float partialTicks) {
++        OldCombatModule module = getModule();
++        if (module.isEnabled() && module.oldAnimations.getValue()) {
++            legacyRenderer.renderItemInFirstPerson(partialTicks);
++        } else {
++            itemRenderer.renderItemInFirstPerson(partialTicks);
++        }
++    }
++
++    @Override
++    public void renderOverlays(float partialTicks) {
++        OldCombatModule module = getModule();
++        if (module.isEnabled() && module.oldAnimations.getValue()) {
++            legacyRenderer.renderOverlays(partialTicks);
++        } else {
++            itemRenderer.renderOverlays(partialTicks);
++        }
++    }
++
++    @Override
++    public void updateEquippedItem() {
++        OldCombatModule module = getModule();
++        if (module.isEnabled() && module.oldAnimations.getValue()) {
++            legacyRenderer.updateEquippedItem();
++        } else {
++            itemRenderer.updateEquippedItem();
++        }
++    }
++
++    @Override
++    public void resetEquippedProgress() {
++        OldCombatModule module = getModule();
++        if (module.isEnabled() && module.oldAnimations.getValue()) {
++            legacyRenderer.resetEquippedProgress();
++        } else {
++            itemRenderer.resetEquippedProgress();
++        }
++    }
++
++    @Override
++    public void resetEquippedProgress2() {
++        OldCombatModule module = getModule();
++        if (module.isEnabled() && module.oldAnimations.getValue()) {
++            legacyRenderer.resetEquippedProgress2();
++        } else {
++            itemRenderer.resetEquippedProgress2();
++        }
++    }
++}
+diff --git a/src/main/java/net/minecraft/client/network/NetHandlerPlayClient.java b/src/main/java/net/minecraft/client/network/NetHandlerPlayClient.java
+index c976f00..61ab35d 100644
+--- a/src/main/java/net/minecraft/client/network/NetHandlerPlayClient.java
++++ b/src/main/java/net/minecraft/client/network/NetHandlerPlayClient.java
+@@ -3,37 +3,18 @@ package net.minecraft.client.network;
+ import com.google.common.collect.Maps;
+ import com.google.common.util.concurrent.FutureCallback;
+ import com.google.common.util.concurrent.Futures;
++import com.jlmsz.JClient;
++import com.jlmsz.event.impl.ChatReceivedEvent;
++import com.jlmsz.event.impl.WorldLoadEvent;
+ import com.mojang.authlib.GameProfile;
+ import io.netty.buffer.Unpooled;
+-
+-import java.io.File;
+-import java.io.IOException;
+-import java.util.Collection;
+-import java.util.List;
+-import java.util.Map;
+-import java.util.Random;
+-import java.util.UUID;
+-import java.util.Map.Entry;
+-
+ import net.minecraft.block.Block;
+ import net.minecraft.client.ClientBrandRetriever;
+ import net.minecraft.client.Minecraft;
+ import net.minecraft.client.audio.GuardianSound;
+ import net.minecraft.client.entity.EntityOtherPlayerMP;
+ import net.minecraft.client.entity.EntityPlayerSP;
+-import net.minecraft.client.gui.GuiChat;
+-import net.minecraft.client.gui.GuiDisconnected;
+-import net.minecraft.client.gui.GuiDownloadTerrain;
+-import net.minecraft.client.gui.GuiMainMenu;
+-import net.minecraft.client.gui.GuiMerchant;
+-import net.minecraft.client.gui.GuiMultiplayer;
+-import net.minecraft.client.gui.GuiScreen;
+-import net.minecraft.client.gui.GuiScreenBook;
+-import net.minecraft.client.gui.GuiScreenDemo;
+-import net.minecraft.client.gui.GuiWinGame;
+-import net.minecraft.client.gui.GuiYesNo;
+-import net.minecraft.client.gui.GuiYesNoCallback;
+-import net.minecraft.client.gui.IProgressMeter;
++import net.minecraft.client.gui.*;
+ import net.minecraft.client.gui.inventory.GuiContainerCreative;
+ import net.minecraft.client.multiplayer.PlayerControllerMP;
+ import net.minecraft.client.multiplayer.ServerData;
+@@ -45,46 +26,15 @@ import net.minecraft.client.player.inventory.LocalBlockIntercommunication;
+ import net.minecraft.client.resources.I18n;
+ import net.minecraft.client.settings.GameSettings;
+ import net.minecraft.creativetab.CreativeTabs;
+-import net.minecraft.entity.DataWatcher;
+-import net.minecraft.entity.Entity;
+-import net.minecraft.entity.EntityLeashKnot;
+-import net.minecraft.entity.EntityList;
+-import net.minecraft.entity.EntityLiving;
+-import net.minecraft.entity.EntityLivingBase;
+-import net.minecraft.entity.IMerchant;
+-import net.minecraft.entity.NpcMerchant;
+-import net.minecraft.entity.ai.attributes.AttributeModifier;
+-import net.minecraft.entity.ai.attributes.BaseAttributeMap;
+-import net.minecraft.entity.ai.attributes.IAttribute;
+-import net.minecraft.entity.ai.attributes.IAttributeInstance;
+-import net.minecraft.entity.ai.attributes.RangedAttribute;
++import net.minecraft.entity.*;
++import net.minecraft.entity.ai.attributes.*;
+ import net.minecraft.entity.effect.EntityLightningBolt;
+-import net.minecraft.entity.item.EntityArmorStand;
+-import net.minecraft.entity.item.EntityBoat;
+-import net.minecraft.entity.item.EntityEnderCrystal;
+-import net.minecraft.entity.item.EntityEnderEye;
+-import net.minecraft.entity.item.EntityEnderPearl;
+-import net.minecraft.entity.item.EntityExpBottle;
+-import net.minecraft.entity.item.EntityFallingBlock;
+-import net.minecraft.entity.item.EntityFireworkRocket;
+-import net.minecraft.entity.item.EntityItem;
+-import net.minecraft.entity.item.EntityItemFrame;
+-import net.minecraft.entity.item.EntityMinecart;
+-import net.minecraft.entity.item.EntityPainting;
+-import net.minecraft.entity.item.EntityTNTPrimed;
+-import net.minecraft.entity.item.EntityXPOrb;
++import net.minecraft.entity.item.*;
+ import net.minecraft.entity.monster.EntityGuardian;
+ import net.minecraft.entity.passive.EntityHorse;
+ import net.minecraft.entity.player.EntityPlayer;
+ import net.minecraft.entity.player.InventoryPlayer;
+-import net.minecraft.entity.projectile.EntityArrow;
+-import net.minecraft.entity.projectile.EntityEgg;
+-import net.minecraft.entity.projectile.EntityFishHook;
+-import net.minecraft.entity.projectile.EntityLargeFireball;
+-import net.minecraft.entity.projectile.EntityPotion;
+-import net.minecraft.entity.projectile.EntitySmallFireball;
+-import net.minecraft.entity.projectile.EntitySnowball;
+-import net.minecraft.entity.projectile.EntityWitherSkull;
++import net.minecraft.entity.projectile.*;
+ import net.minecraft.init.Items;
+ import net.minecraft.inventory.AnimalChest;
+ import net.minecraft.inventory.Container;
+@@ -97,109 +47,15 @@ import net.minecraft.network.Packet;
+ import net.minecraft.network.PacketBuffer;
+ import net.minecraft.network.PacketThreadUtil;
+ import net.minecraft.network.play.INetHandlerPlayClient;
+-import net.minecraft.network.play.client.C00PacketKeepAlive;
+-import net.minecraft.network.play.client.C03PacketPlayer;
+-import net.minecraft.network.play.client.C0FPacketConfirmTransaction;
+-import net.minecraft.network.play.client.C17PacketCustomPayload;
+-import net.minecraft.network.play.client.C19PacketResourcePackStatus;
+-import net.minecraft.network.play.server.S00PacketKeepAlive;
+-import net.minecraft.network.play.server.S01PacketJoinGame;
+-import net.minecraft.network.play.server.S02PacketChat;
+-import net.minecraft.network.play.server.S03PacketTimeUpdate;
+-import net.minecraft.network.play.server.S04PacketEntityEquipment;
+-import net.minecraft.network.play.server.S05PacketSpawnPosition;
+-import net.minecraft.network.play.server.S06PacketUpdateHealth;
+-import net.minecraft.network.play.server.S07PacketRespawn;
+-import net.minecraft.network.play.server.S08PacketPlayerPosLook;
+-import net.minecraft.network.play.server.S09PacketHeldItemChange;
+-import net.minecraft.network.play.server.S0APacketUseBed;
+-import net.minecraft.network.play.server.S0BPacketAnimation;
+-import net.minecraft.network.play.server.S0CPacketSpawnPlayer;
+-import net.minecraft.network.play.server.S0DPacketCollectItem;
+-import net.minecraft.network.play.server.S0EPacketSpawnObject;
+-import net.minecraft.network.play.server.S0FPacketSpawnMob;
+-import net.minecraft.network.play.server.S10PacketSpawnPainting;
+-import net.minecraft.network.play.server.S11PacketSpawnExperienceOrb;
+-import net.minecraft.network.play.server.S12PacketEntityVelocity;
+-import net.minecraft.network.play.server.S13PacketDestroyEntities;
+-import net.minecraft.network.play.server.S14PacketEntity;
+-import net.minecraft.network.play.server.S18PacketEntityTeleport;
+-import net.minecraft.network.play.server.S19PacketEntityHeadLook;
+-import net.minecraft.network.play.server.S19PacketEntityStatus;
+-import net.minecraft.network.play.server.S1BPacketEntityAttach;
+-import net.minecraft.network.play.server.S1CPacketEntityMetadata;
+-import net.minecraft.network.play.server.S1DPacketEntityEffect;
+-import net.minecraft.network.play.server.S1EPacketRemoveEntityEffect;
+-import net.minecraft.network.play.server.S1FPacketSetExperience;
+-import net.minecraft.network.play.server.S20PacketEntityProperties;
+-import net.minecraft.network.play.server.S21PacketChunkData;
+-import net.minecraft.network.play.server.S22PacketMultiBlockChange;
+-import net.minecraft.network.play.server.S23PacketBlockChange;
+-import net.minecraft.network.play.server.S24PacketBlockAction;
+-import net.minecraft.network.play.server.S25PacketBlockBreakAnim;
+-import net.minecraft.network.play.server.S26PacketMapChunkBulk;
+-import net.minecraft.network.play.server.S27PacketExplosion;
+-import net.minecraft.network.play.server.S28PacketEffect;
+-import net.minecraft.network.play.server.S29PacketSoundEffect;
+-import net.minecraft.network.play.server.S2APacketParticles;
+-import net.minecraft.network.play.server.S2BPacketChangeGameState;
+-import net.minecraft.network.play.server.S2CPacketSpawnGlobalEntity;
+-import net.minecraft.network.play.server.S2DPacketOpenWindow;
+-import net.minecraft.network.play.server.S2EPacketCloseWindow;
+-import net.minecraft.network.play.server.S2FPacketSetSlot;
+-import net.minecraft.network.play.server.S30PacketWindowItems;
+-import net.minecraft.network.play.server.S31PacketWindowProperty;
+-import net.minecraft.network.play.server.S32PacketConfirmTransaction;
+-import net.minecraft.network.play.server.S33PacketUpdateSign;
+-import net.minecraft.network.play.server.S34PacketMaps;
+-import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
+-import net.minecraft.network.play.server.S36PacketSignEditorOpen;
+-import net.minecraft.network.play.server.S37PacketStatistics;
+-import net.minecraft.network.play.server.S38PacketPlayerListItem;
+-import net.minecraft.network.play.server.S39PacketPlayerAbilities;
+-import net.minecraft.network.play.server.S3APacketTabComplete;
+-import net.minecraft.network.play.server.S3BPacketScoreboardObjective;
+-import net.minecraft.network.play.server.S3CPacketUpdateScore;
+-import net.minecraft.network.play.server.S3DPacketDisplayScoreboard;
+-import net.minecraft.network.play.server.S3EPacketTeams;
+-import net.minecraft.network.play.server.S3FPacketCustomPayload;
+-import net.minecraft.network.play.server.S40PacketDisconnect;
+-import net.minecraft.network.play.server.S41PacketServerDifficulty;
+-import net.minecraft.network.play.server.S42PacketCombatEvent;
+-import net.minecraft.network.play.server.S43PacketCamera;
+-import net.minecraft.network.play.server.S44PacketWorldBorder;
+-import net.minecraft.network.play.server.S45PacketTitle;
+-import net.minecraft.network.play.server.S46PacketSetCompressionLevel;
+-import net.minecraft.network.play.server.S47PacketPlayerListHeaderFooter;
+-import net.minecraft.network.play.server.S48PacketResourcePackSend;
+-import net.minecraft.network.play.server.S49PacketUpdateEntityNBT;
++import net.minecraft.network.play.client.*;
++import net.minecraft.network.play.server.*;
+ import net.minecraft.potion.PotionEffect;
+-import net.minecraft.scoreboard.IScoreObjectiveCriteria;
+-import net.minecraft.scoreboard.Score;
+-import net.minecraft.scoreboard.ScoreObjective;
+-import net.minecraft.scoreboard.ScorePlayerTeam;
+-import net.minecraft.scoreboard.Scoreboard;
+-import net.minecraft.scoreboard.Team;
++import net.minecraft.scoreboard.*;
+ import net.minecraft.stats.Achievement;
+ import net.minecraft.stats.AchievementList;
+ import net.minecraft.stats.StatBase;
+-import net.minecraft.tileentity.TileEntity;
+-import net.minecraft.tileentity.TileEntityBanner;
+-import net.minecraft.tileentity.TileEntityBeacon;
+-import net.minecraft.tileentity.TileEntityCommandBlock;
+-import net.minecraft.tileentity.TileEntityFlowerPot;
+-import net.minecraft.tileentity.TileEntityMobSpawner;
+-import net.minecraft.tileentity.TileEntitySign;
+-import net.minecraft.tileentity.TileEntitySkull;
+-import net.minecraft.util.BlockPos;
+-import net.minecraft.util.ChatComponentText;
+-import net.minecraft.util.ChatComponentTranslation;
+-import net.minecraft.util.EnumChatFormatting;
+-import net.minecraft.util.EnumFacing;
+-import net.minecraft.util.EnumParticleTypes;
+-import net.minecraft.util.IChatComponent;
+-import net.minecraft.util.MathHelper;
+-import net.minecraft.util.StringUtils;
++import net.minecraft.tileentity.*;
++import net.minecraft.util.*;
+ import net.minecraft.village.MerchantRecipeList;
+ import net.minecraft.world.Explosion;
+ import net.minecraft.world.WorldProviderSurface;
+@@ -209,6 +65,11 @@ import net.minecraft.world.storage.MapData;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ 
++import java.io.File;
++import java.io.IOException;
++import java.util.*;
++import java.util.Map.Entry;
++
+ public class NetHandlerPlayClient implements INetHandlerPlayClient {
+     private static final Logger logger = LogManager.getLogger();
+ 
+@@ -282,6 +143,9 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
+         this.gameController.playerController.setGameType(packetIn.getGameType());
+         this.gameController.gameSettings.sendSettingsToServer();
+         this.netManager.sendPacket(new C17PacketCustomPayload("MC|Brand", (new PacketBuffer(Unpooled.buffer())).writeString(ClientBrandRetriever.getClientModName())));
++
++        JClient.EVENT_BUS.invokeEvent(new WorldLoadEvent(clientWorldController));
++
+     }
+ 
+     /**
+@@ -729,6 +593,8 @@ public class NetHandlerPlayClient implements INetHandlerPlayClient {
+     public void handleChat(S02PacketChat packetIn) {
+         PacketThreadUtil.checkThreadAndEnqueue(packetIn, this, this.gameController);
+ 
++        if (!JClient.EVENT_BUS.invokeEvent(new ChatReceivedEvent(packetIn.getChatComponent()))) return;
++
+         if (packetIn.getType() == 2) {
+             this.gameController.ingameGUI.setRecordPlaying(packetIn.getChatComponent(), false);
+         } else {
+diff --git a/src/main/java/net/minecraft/client/renderer/entity/RenderItem.java b/src/main/java/net/minecraft/client/renderer/entity/RenderItem.java
+index 99719ca..c14044e 100644
+--- a/src/main/java/net/minecraft/client/renderer/entity/RenderItem.java
++++ b/src/main/java/net/minecraft/client/renderer/entity/RenderItem.java
+@@ -37,7 +37,7 @@ import java.util.List;
+ import java.util.concurrent.Callable;
+ 
+ public class RenderItem implements IResourceManagerReloadListener {
+-    private static final ResourceLocation RES_ITEM_GLINT = new ResourceLocation("textures/misc/enchanted_item_glint.png");
++    public static final ResourceLocation RES_ITEM_GLINT = new ResourceLocation("textures/misc/enchanted_item_glint.png");
+ 
+     /**
+      * False when the renderer is rendering the item's effects into a GUI
+@@ -122,13 +122,7 @@ public class RenderItem implements IResourceManagerReloadListener {
+             this.renderQuads(worldrenderer, model.getFaceQuads(enumfacing), color, stack);
+         }
+ 
+-        if (stack.getItem() == Items.diamond_sword) {
+-            List<BakedQuad> quads = model.getGeneralQuads();
+-//            quads = quads.subList(2, 1000);
+-            this.renderQuads(worldrenderer, quads, color, stack);
+-        } else {
+-            this.renderQuads(worldrenderer, model.getGeneralQuads(), color, stack);
+-        }
++        this.renderQuads(worldrenderer, model.getGeneralQuads(), color, stack);
+         tessellator.draw();
+ 
+         if (flag1) {
+diff --git a/src/main/java/net/minecraft/client/renderer/entity/RendererLivingEntity.java b/src/main/java/net/minecraft/client/renderer/entity/RendererLivingEntity.java
+index 37eba2e..bdfb26f 100644
+--- a/src/main/java/net/minecraft/client/renderer/entity/RendererLivingEntity.java
++++ b/src/main/java/net/minecraft/client/renderer/entity/RendererLivingEntity.java
+@@ -4,6 +4,8 @@ import com.google.common.collect.Lists;
+ import java.nio.FloatBuffer;
+ import java.util.List;
+ 
++import com.jlmsz.module.ModuleRegistry;
++import com.jlmsz.module.impl.NametagsModule;
+ import com.jlmsz.util.renderer.IRenderManager;
+ import net.minecraft.client.Minecraft;
+ import net.minecraft.client.entity.EntityPlayerSP;
+@@ -722,7 +724,7 @@ public abstract class RendererLivingEntity<T extends EntityLivingBase> extends R
+             }
+         }
+ 
+-        return Minecraft.isGuiEnabled() && entity != this.renderManager.getLivingPlayer() && !entity.isInvisibleToPlayer(entityplayersp) && entity.riddenByEntity == null;
++        return Minecraft.isGuiEnabled() && entity != this.renderManager.getLivingPlayer() && !entity.isInvisibleToPlayer(entityplayersp) && entity.riddenByEntity == null && !(entity instanceof EntityPlayer && ModuleRegistry.getModuleByClass(NametagsModule.class).isEnabled());
+     }
+ 
+     public void setRenderOutlines(boolean renderOutlinesIn)
+-- 
+2.34.1
+

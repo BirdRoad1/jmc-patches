@@ -1,0 +1,101 @@
+From 7341d7b0d07df3907c45e7590a2c104896229451 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sun, 29 Jun 2025 03:06:28 -0400
+Subject: [PATCH 40/60] add AutoGG module
+
+---
+ .../com/jlmsz/module/impl/AutoGGModule.java   | 68 +++++++++++++++++++
+ .../assets/jclient/data/auto_gg.json          |  5 ++
+ 2 files changed, 73 insertions(+)
+ create mode 100644 src/main/java/com/jlmsz/module/impl/AutoGGModule.java
+ create mode 100644 src/main/resources/assets/jclient/data/auto_gg.json
+
+diff --git a/src/main/java/com/jlmsz/module/impl/AutoGGModule.java b/src/main/java/com/jlmsz/module/impl/AutoGGModule.java
+new file mode 100644
+index 0000000..e9f05d0
+--- /dev/null
++++ b/src/main/java/com/jlmsz/module/impl/AutoGGModule.java
+@@ -0,0 +1,68 @@
++package com.jlmsz.module.impl;
++
++import com.google.gson.Gson;
++import com.google.gson.JsonSyntaxException;
++import com.jlmsz.JClient;
++import com.jlmsz.event.EventHandler;
++import com.jlmsz.event.impl.ChatReceivedEvent;
++import com.jlmsz.event.impl.WorldLoadEvent;
++import com.jlmsz.module.Module;
++import com.jlmsz.module.ModuleCategory;
++
++import java.io.BufferedReader;
++import java.io.IOException;
++import java.io.InputStream;
++import java.io.InputStreamReader;
++import java.util.ArrayList;
++import java.util.List;
++import java.util.regex.Pattern;
++
++public class AutoGGModule extends Module {
++    private final List<Pattern> expressions = new ArrayList<>();
++    private boolean alreadyGG = false;
++
++    public AutoGGModule() {
++        super("AutoGG", "Automatic sportsmanship", ModuleCategory.UTIL);
++        JClient.EVENT_BUS.registerListener(this);
++        try (InputStream stream = AutoGGModule.class.getResourceAsStream("/assets/jclient/data/auto_gg.json")) {
++            BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
++
++            Gson gson = new Gson();
++            AutoGGData data = gson.fromJson(reader, AutoGGData.class);
++            if (data.lines == null) {
++                System.out.println("Failed to parse auto_gg.json: no lines");
++                return;
++            }
++
++            for (String line : data.lines) {
++                expressions.add(Pattern.compile(line));
++            }
++        } catch (Exception ex) {
++            System.out.println("Failed to parse auto_gg.json:");
++            ex.printStackTrace();
++        }
++    }
++
++    @EventHandler
++    public void onWorldLoad(WorldLoadEvent event) {
++        alreadyGG = false;
++    }
++
++    @EventHandler
++    public void onChatMessage(ChatReceivedEvent event) {
++        if (!this.isEnabled()) return;
++        if (alreadyGG) return;
++        String message = event.getComponent().getFormattedText();
++        for (Pattern pattern : expressions) {
++            if (pattern.matcher(message).matches()) {
++                alreadyGG = true;
++                mc.thePlayer.sendChatMessage("gg");
++                return;
++            }
++        }
++    }
++
++    static class AutoGGData {
++        String[] lines;
++    }
++}
+diff --git a/src/main/resources/assets/jclient/data/auto_gg.json b/src/main/resources/assets/jclient/data/auto_gg.json
+new file mode 100644
+index 0000000..80be283
+--- /dev/null
++++ b/src/main/resources/assets/jclient/data/auto_gg.json
+@@ -0,0 +1,5 @@
++{
++  "lines": [
++    "§r§f                    §r§e§l1st Killer §r§7- .*§r§f§r§e §r§7- .*§r"
++  ]
++}
+\ No newline at end of file
+-- 
+2.34.1
+

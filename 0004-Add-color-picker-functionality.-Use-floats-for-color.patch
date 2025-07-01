@@ -1,0 +1,186 @@
+From 801f6c535104577f9572ff20e442766ab236ef31 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Tue, 24 Jun 2025 09:43:21 -0400
+Subject: [PATCH 04/60] Add color picker functionality. Use floats for colors.
+
+---
+ .../component/impl/ColorPickerComponent.java  | 61 ++++++++++++++++++-
+ .../module/config/ColorModuleSetting.java     | 22 +++----
+ 2 files changed, 65 insertions(+), 18 deletions(-)
+
+diff --git a/src/main/java/com/jlmsz/gui/component/impl/ColorPickerComponent.java b/src/main/java/com/jlmsz/gui/component/impl/ColorPickerComponent.java
+index 607c77d..a329eab 100644
+--- a/src/main/java/com/jlmsz/gui/component/impl/ColorPickerComponent.java
++++ b/src/main/java/com/jlmsz/gui/component/impl/ColorPickerComponent.java
+@@ -1,16 +1,21 @@
+ package com.jlmsz.gui.component.impl;
+ 
+ import com.jlmsz.gui.component.IComponent;
++import com.jlmsz.module.config.ColorModuleSetting;
+ import com.jlmsz.module.impl.CrosshairModule;
++import com.jlmsz.util.ColorUtil;
+ import com.jlmsz.util.GuiUtil;
++import com.jlmsz.util.color.ARGBColor;
+ import net.minecraft.client.Minecraft;
+ import net.minecraft.client.gui.Gui;
++import net.minecraft.util.MathHelper;
+ import org.lwjgl.BufferUtils;
+ import org.lwjgl.opengl.GL11;
+ import org.lwjgl.opengl.GL15;
+ import org.lwjgl.opengl.GL20;
+ import org.lwjgl.opengl.GL30;
+ 
++import javax.vecmath.Vector3f;
+ import java.io.BufferedReader;
+ import java.io.IOException;
+ import java.io.InputStream;
+@@ -18,6 +23,7 @@ import java.io.InputStreamReader;
+ import java.nio.FloatBuffer;
+ 
+ public class ColorPickerComponent extends Gui implements IComponent {
++    private final ColorModuleSetting setting;
+     private int x;
+     private int y;
+     private final int boxWidth = 200;
+@@ -48,7 +54,17 @@ public class ColorPickerComponent extends Gui implements IComponent {
+     private int sliderQuadOffsetLoc;
+     private int sliderQuadSizeLoc;
+ 
+-    public ColorPickerComponent(int x, int y) {
++    // Coordinates relative to component position
++    private float cursorX;
++    private float cursorY;
++
++    private float hueY;
++
++    private boolean clickedBox;
++    private boolean clickedSlider;
++
++    public ColorPickerComponent(ColorModuleSetting setting, int x, int y) {
++        this.setting = setting;
+         this.x = x;
+         this.y = y;
+         initBox();
+@@ -175,7 +191,7 @@ public class ColorPickerComponent extends Gui implements IComponent {
+         // Set uniforms
+         GL20.glUniform2f(boxQuadOffsetLoc, x, mc.displayHeight - y - height);
+         GL20.glUniform2f(boxQuadSizeLoc, boxWidth, height); // <-- THIS IS CRUCIAL
+-        GL20.glUniform1f(boxHueLoc, 0.4f);
++        GL20.glUniform1f(boxHueLoc, hueY / height);
+         GL20.glUniform2f(boxScreenSizeLoc, mc.displayWidth, mc.displayHeight);
+ 
+         GL11.glDrawArrays(GL11.GL_TRIANGLE_STRIP, 0, 4);
+@@ -201,16 +217,47 @@ public class ColorPickerComponent extends Gui implements IComponent {
+         GL20.glUseProgram(0);
+     }
+ 
++    private void updateColor() {
++        ARGBColor color = ColorUtil.hsvToRgb(new Vector3f(hueY / height, cursorX / boxWidth, 1-(cursorY / height)));
++        setting.setValue(color);
++    }
++
+     private void renderBorder() {
+         int border = 2;
+         GuiUtil.drawUnscaledRect(x - border, y - border, x + boxWidth + 5 + sliderWidth + border, y + height + border, 0xFFDDDDDD);
+     }
+ 
++    private void renderCursor(int mouseX, int mouseY) {
++        if (clickedBox) {
++            cursorX = MathHelper.clamp_float(mouseX - x, 0, boxWidth);
++            cursorY = MathHelper.clamp_float(mouseY - y, 0, height);
++            updateColor();
++        }
++
++        GuiUtil.drawRect(x + cursorX - 5, y + cursorY - 5, x + cursorX + 5, y + cursorY + 5, 0xFF000000);
++        GuiUtil.drawRect(x + cursorX - 3, y + cursorY - 3, x + cursorX + 3, y + cursorY + 3, 0xFFFFFFFF);
++    }
++
++    private void renderHueSlider(int mouseX, int mouseY) {
++        if (clickedSlider) {
++            hueY = MathHelper.clamp_float(mouseY - y, 0, height);
++            updateColor();
++        }
++
++        GuiUtil.drawRect(x + 200 + 5 - 3, y + hueY - 5 - 3, x + 200 + 8 + sliderWidth + 3, y + hueY + 5 + 3, 0xFF000000);
++
++        GuiUtil.drawRect(x + 200 + 5, y + hueY - 5, x + 200 + 5 + sliderWidth, y + hueY + 5, 0xFFFFFFFF);
++    }
++
+     @Override
+     public void renderComponent(int mouseX, int mouseY) {
+         renderBorder();
++
+         renderBox();
++        renderCursor(mouseX, mouseY);
++
+         renderSlider();
++        renderHueSlider(mouseX, mouseY);
+     }
+ 
+     @Override
+@@ -220,12 +267,20 @@ public class ColorPickerComponent extends Gui implements IComponent {
+ 
+     @Override
+     public void mouseReleased(int mouseX, int mouseY, int state) {
+-
++        clickedBox = false;
++        clickedSlider = false;
+     }
+ 
+     @Override
+     public void mouseClicked(int mouseX, int mouseY, int mouseButton) {
++        if (mouseX >= this.x && mouseX <= this.x + boxWidth && mouseY >= this.y && mouseY <= this.y + height) {
++            clickedBox = true;
++        }
+ 
++        //x + 200 + 5, mc.displayHeight - y - height
++        if (mouseX >= x + 200 + 5 && mouseX <= x + 200 + 5 + sliderWidth && mouseY >= y && mouseY <= y + height) {
++            clickedSlider = true;
++        }
+     }
+ 
+     @Override
+diff --git a/src/main/java/com/jlmsz/module/config/ColorModuleSetting.java b/src/main/java/com/jlmsz/module/config/ColorModuleSetting.java
+index f5845d8..f073c0d 100644
+--- a/src/main/java/com/jlmsz/module/config/ColorModuleSetting.java
++++ b/src/main/java/com/jlmsz/module/config/ColorModuleSetting.java
+@@ -1,29 +1,21 @@
+ package com.jlmsz.module.config;
+ 
+-public class ColorModuleSetting extends ModuleSetting<ColorModuleSetting.RGBColor> {
++import com.jlmsz.util.color.ARGBColor;
+ 
+-    public ColorModuleSetting(RGBColor defaultValue) {
++public class ColorModuleSetting extends ModuleSetting<ARGBColor> {
++
++    public ColorModuleSetting(ARGBColor defaultValue) {
+         super(defaultValue);
+     }
+ 
+-    private boolean isInRange(int num) {
+-        return num >= 0 && num <= 255;
++    private boolean isInRange(float num) {
++        return num >= 0f && num <= 255f;
+     }
+ 
+     @Override
+-    public boolean isValidValue(RGBColor value) {
++    public boolean isValidValue(ARGBColor value) {
+         return isInRange(value.r) && isInRange(value.g) && isInRange(value.b);
+     }
+ 
+-    public static class RGBColor {
+-        int r;
+-        int g;
+-        int b;
+ 
+-        public RGBColor(int r, int g, int b) {
+-            this.r = r;
+-            this.g = g;
+-            this.b = b;
+-        }
+-    }
+ }
+-- 
+2.34.1
+

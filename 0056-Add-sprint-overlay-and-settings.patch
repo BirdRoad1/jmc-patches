@@ -1,0 +1,81 @@
+From dc793506b7e69e1d842851597bd5ff1afefe3066 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Mon, 30 Jun 2025 13:08:35 -0400
+Subject: [PATCH 56/60] Add sprint overlay and settings
+
+---
+ .../com/jlmsz/gui/overlay/SprintOverlay.java  | 15 ++++++++++++++
+ .../com/jlmsz/module/impl/SprintModule.java   | 20 +++++++++++++++++++
+ 2 files changed, 35 insertions(+)
+ create mode 100644 src/main/java/com/jlmsz/gui/overlay/SprintOverlay.java
+
+diff --git a/src/main/java/com/jlmsz/gui/overlay/SprintOverlay.java b/src/main/java/com/jlmsz/gui/overlay/SprintOverlay.java
+new file mode 100644
+index 0000000..ccff920
+--- /dev/null
++++ b/src/main/java/com/jlmsz/gui/overlay/SprintOverlay.java
+@@ -0,0 +1,15 @@
++package com.jlmsz.gui.overlay;
++
++import com.jlmsz.util.GuiUtil;
++import net.minecraft.client.Minecraft;
++
++public class SprintOverlay extends Overlay {
++    public SprintOverlay(Minecraft mc, int x, int y) {
++        super(mc, x, y, mc.fontRendererObj.getStringWidth("Sprinting enabled"), mc.fontRendererObj.FONT_HEIGHT, 1);
++    }
++
++    @Override
++    public void render() {
++        GuiUtil.drawUnscaledString(mc.fontRendererObj, "Sprinting enabled", x, y, 0xFFFFFFFF, scale);
++    }
++}
+diff --git a/src/main/java/com/jlmsz/module/impl/SprintModule.java b/src/main/java/com/jlmsz/module/impl/SprintModule.java
+index dfbdbf7..c614e03 100644
+--- a/src/main/java/com/jlmsz/module/impl/SprintModule.java
++++ b/src/main/java/com/jlmsz/module/impl/SprintModule.java
+@@ -3,14 +3,28 @@ package com.jlmsz.module.impl;
+ import com.jlmsz.JClient;
+ import com.jlmsz.event.EventHandler;
+ import com.jlmsz.event.impl.RenderEvent;
++import com.jlmsz.gui.overlay.ScreenOverlay;
++import com.jlmsz.gui.overlay.SprintOverlay;
+ import com.jlmsz.module.Module;
+ import com.jlmsz.module.ModuleCategory;
++import com.jlmsz.module.config.BooleanModuleSetting;
+ import net.minecraft.client.settings.KeyBinding;
+ 
+ public class SprintModule extends Module {
++    private final SprintOverlay overlay = new SprintOverlay(mc, 0, 0);
++    private final BooleanModuleSetting overlayEnabled = new BooleanModuleSetting(true);
++
+     public SprintModule() {
+         super("Sprint", "Keeps you sprinting", ModuleCategory.MOVEMENT);
+         JClient.EVENT_BUS.registerListener(this);
++        addSetting("Show sprinting text", overlayEnabled);
++        overlayEnabled.addChangeListener(value -> {
++            if (this.isEnabled() && value) {
++                ScreenOverlay.registerOverlay(overlay);
++            } else {
++                ScreenOverlay.removeOverlay(overlay);
++            }
++        });
+     }
+ 
+     @EventHandler
+@@ -22,6 +36,12 @@ public class SprintModule extends Module {
+     @Override
+     public void setEnabled(boolean enabled) {
+         KeyBinding.setKeyBindState(mc.gameSettings.keyBindSprint.getKeyCode(), false);
++        if (enabled && overlayEnabled.getValue()) {
++            ScreenOverlay.registerOverlay(overlay);
++        } else {
++            ScreenOverlay.removeOverlay(overlay);
++        }
++
+         super.setEnabled(enabled);
+     }
+ }
+-- 
+2.34.1
+

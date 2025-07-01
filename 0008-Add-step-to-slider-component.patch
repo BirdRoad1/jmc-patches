@@ -1,0 +1,57 @@
+From 37921b27f7ef3ef39edad6ea25e4c3d7c9862b04 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Tue, 24 Jun 2025 09:45:32 -0400
+Subject: [PATCH 08/60] Add step to slider component
+
+---
+ .../com/jlmsz/gui/component/impl/SliderComponent.java     | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/src/main/java/com/jlmsz/gui/component/impl/SliderComponent.java b/src/main/java/com/jlmsz/gui/component/impl/SliderComponent.java
+index bac76e8..7cfbccd 100644
+--- a/src/main/java/com/jlmsz/gui/component/impl/SliderComponent.java
++++ b/src/main/java/com/jlmsz/gui/component/impl/SliderComponent.java
+@@ -19,25 +19,28 @@ public class SliderComponent extends Gui implements IComponent {
+     private double min;
+     private double max;
+     private double value;
++    private double step;
+     private boolean mouseDown = false;
+     public boolean clickedHandle = false;
+     private final Minecraft mc = Minecraft.getMinecraft();
+     private final int sliderX;
+     private final List<IValueChange> changeCallbacks = new ArrayList<>();
+ 
+-    public SliderComponent(int x, int y, int width, int height, double min, double max, double defaultValue) {
++    public SliderComponent(int x, int y, int width, int height, double min, double max, double step, double defaultValue) {
+         this.x = x;
+         this.y = y;
+         this.width = width;
+         this.height = height;
+         this.min = min;
+         this.max = max;
++        this.step = step;
+         this.value = defaultValue;
+         this.sliderX = x + 60;
+     }
+ 
+     public void renderComponent(int mouseX, int mouseY) {
+         double offset = max == min ? 0 : ((value - min) / (max - min)) * width;
++        System.out.println(value);
+         GuiUtil.drawUnscaledString(mc.fontRendererObj, String.format("%.2f", value), x, y - mc.fontRendererObj.FONT_HEIGHT / 4, 0xFFFFFFFF, 2f);
+ 
+         GuiUtil.drawUnscaledRect(sliderX, y, sliderX + width, y + height, 0xFFFFFFFF);
+@@ -50,9 +53,8 @@ public class SliderComponent extends Gui implements IComponent {
+             }
+             int mousePos = MathHelper.clamp_int(mouseX, sliderX, sliderX + width);
+             double mousePercent = ((double) mousePos - sliderX) / width;
+-            value = MathHelper.clamp_double(min + (max - min) * mousePercent, min, max);
++            value = Math.round(MathHelper.clamp_double(min + (max - min) * mousePercent, min, max) / step) * step;
+             this.fireValueChange();
+-            System.out.println(value);
+         }
+     }
+ 
+-- 
+2.34.1
+

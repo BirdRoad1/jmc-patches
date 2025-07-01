@@ -1,0 +1,37 @@
+From ec5cd6175439fd9ccaa3b85ba7fed54862efd6ea Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Mon, 30 Jun 2025 13:08:54 -0400
+Subject: [PATCH 57/60] packet logger ignore packets for now to avoid
+ exceptions
+
+---
+ src/main/java/com/jlmsz/util/PacketLogger.java | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/main/java/com/jlmsz/util/PacketLogger.java b/src/main/java/com/jlmsz/util/PacketLogger.java
+index c83ebce..e386acf 100644
+--- a/src/main/java/com/jlmsz/util/PacketLogger.java
++++ b/src/main/java/com/jlmsz/util/PacketLogger.java
+@@ -7,6 +7,9 @@ import net.minecraft.item.Item;
+ import net.minecraft.item.ItemStack;
+ import net.minecraft.network.Packet;
+ import net.minecraft.network.PacketBuffer;
++import net.minecraft.network.play.server.S22PacketMultiBlockChange;
++import net.minecraft.network.play.server.S23PacketBlockChange;
++import net.minecraft.network.play.server.S24PacketBlockAction;
+ 
+ import java.io.BufferedWriter;
+ import java.io.File;
+@@ -54,6 +57,9 @@ public class PacketLogger extends Module {
+     }
+ 
+     private void savePacket(Packet<?> packet) {
++        if (packet instanceof S22PacketMultiBlockChange || packet instanceof S24PacketBlockAction || packet instanceof S23PacketBlockChange)
++            return;
++
+         if (threadPool == null) return;
+         threadPool.submit(() -> {
+             if (!packetsDir.mkdir() && !packetsDir.exists()) {
+-- 
+2.34.1
+

@@ -1,0 +1,44 @@
+From 859cb42aa472091c14d5686a9ba695659b9e3a6e Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sun, 29 Jun 2025 03:07:11 -0400
+Subject: [PATCH 43/60] fix scroll issue in module list view
+
+---
+ .../java/com/jlmsz/gui/settings/view/ModuleListView.java | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/src/main/java/com/jlmsz/gui/settings/view/ModuleListView.java b/src/main/java/com/jlmsz/gui/settings/view/ModuleListView.java
+index 4bdc858..00d660f 100644
+--- a/src/main/java/com/jlmsz/gui/settings/view/ModuleListView.java
++++ b/src/main/java/com/jlmsz/gui/settings/view/ModuleListView.java
+@@ -3,6 +3,7 @@ package com.jlmsz.gui.settings.view;
+ import com.jlmsz.gui.interfaces.IPanelSwitcher;
+ import com.jlmsz.gui.settings.card.ModuleCard;
+ import com.jlmsz.gui.settings.view.base.ScrollableView;
++import com.jlmsz.gui.settings.view.base.View;
+ import com.jlmsz.gui.settings.view.factory.ViewFactory;
+ import com.jlmsz.module.Module;
+ import com.jlmsz.module.ModuleRegistry;
+@@ -55,8 +56,7 @@ public class ModuleListView extends ScrollableView {
+ 
+             cardX += cardWidth + gap;
+         }
+-
+-        setMaxScroll(cardY - y - height);
++        setMaxScroll(cardY - y - height + gap + cardHeight);
+     }
+ 
+     @Override
+@@ -96,4 +96,9 @@ public class ModuleListView extends ScrollableView {
+             card.mouseReleased(mouseX, mouseY, state);
+         }
+     }
++
++    @Override
++    public View recreate(ViewFactory factory) {
++        return factory.createModuleListView();
++    }
+ }
+-- 
+2.34.1
+

@@ -1,0 +1,190 @@
+From bb9fb909e4167e651c1a958c179df829398e8d4f Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sun, 29 Jun 2025 03:04:15 -0400
+Subject: [PATCH 37/60] Add input event
+
+---
+ .../java/com/jlmsz/event/impl/InputEvent.java | 49 +++++++++++++++++++
+ .../java/net/minecraft/client/Minecraft.java  | 46 ++++++-----------
+ 2 files changed, 65 insertions(+), 30 deletions(-)
+ create mode 100644 src/main/java/com/jlmsz/event/impl/InputEvent.java
+
+diff --git a/src/main/java/com/jlmsz/event/impl/InputEvent.java b/src/main/java/com/jlmsz/event/impl/InputEvent.java
+new file mode 100644
+index 0000000..d3d41f3
+--- /dev/null
++++ b/src/main/java/com/jlmsz/event/impl/InputEvent.java
+@@ -0,0 +1,49 @@
++package com.jlmsz.event.impl;
++
++import com.jlmsz.event.Event;
++
++public abstract class InputEvent {
++
++    public static class Mouse extends Event {
++        private final int button;
++
++        public Mouse(int button) {
++            super(true);
++            this.button = button;
++        }
++
++        public int getButton() {
++            return button;
++        }
++    }
++
++    public static class Keyboard extends Event {
++        private final int button;
++
++        public Keyboard(int button) {
++            super(true);
++            this.button = button;
++        }
++
++        public int getButton() {
++            return button;
++        }
++    }
++
++    public enum MouseButton {
++        LEFT(0),
++        RIGHT(1),
++        MIDDLE(2);
++
++        private final int id;
++
++        MouseButton(int id) {
++            this.id = id;
++        }
++
++        public int getId() {
++            return id;
++        }
++    }
++
++}
+diff --git a/src/main/java/net/minecraft/client/Minecraft.java b/src/main/java/net/minecraft/client/Minecraft.java
+index f31e45f..2c00027 100644
+--- a/src/main/java/net/minecraft/client/Minecraft.java
++++ b/src/main/java/net/minecraft/client/Minecraft.java
+@@ -9,6 +9,7 @@ import com.google.common.util.concurrent.ListenableFuture;
+ import com.google.common.util.concurrent.ListenableFutureTask;
+ import com.jlmsz.JClient;
+ import com.jlmsz.event.impl.GameStartedEvent;
++import com.jlmsz.event.impl.InputEvent;
+ import com.jlmsz.event.impl.RenderEvent;
+ import com.jlmsz.event.impl.TickEvent;
+ import com.jlmsz.gui.settings.SettingsGui;
+@@ -131,7 +132,6 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
+     public static byte[] memoryReserve = new byte[10485760];
+     private static final List<DisplayMode> macDisplayModes = Lists.newArrayList(new DisplayMode[]{new DisplayMode(2560, 1600), new DisplayMode(2880, 1800)});
+     private final File fileResourcepacks;
+-    private final PropertyMap twitchDetails;
+ 
+     /**
+      * The player's GameProfile properties
+@@ -348,7 +348,6 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
+         this.fileAssets = gameConfig.folderInfo.assetsDir;
+         this.fileResourcepacks = gameConfig.folderInfo.resourcePacksDir;
+         this.launchedVersion = gameConfig.gameInfo.version;
+-        this.twitchDetails = gameConfig.userInfo.userProperties;
+         this.profileProperties = gameConfig.userInfo.profileProperties;
+         this.mcDefaultResourcePack = new DefaultResourcePack((new ResourceIndex(gameConfig.folderInfo.assetsDir, gameConfig.folderInfo.assetIndex)).getResourceMap());
+         this.proxy = gameConfig.userInfo.proxy == null ? Proxy.NO_PROXY : gameConfig.userInfo.proxy;
+@@ -1305,7 +1304,6 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
+     }
+ 
+     private void clickMouse() {
+-//        if (thePlayer.getFakeItemInUseCount() > 0) return;
+         if (this.leftClickCounter <= 0) {
+             this.thePlayer.swingItem();
+ 
+@@ -1658,6 +1656,10 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
+                     if (this.currentScreen != null) {
+                         this.currentScreen.handleKeyboardInput();
+                     } else {
++                        if (!JClient.EVENT_BUS.invokeEvent(new InputEvent.Keyboard(k))) {
++                            k = -999; // prevent key handling
++                        }
++
+                         if (k == 1) {
+                             this.displayInGameMenu();
+                         }
+@@ -1670,26 +1672,6 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
+                             this.refreshResources();
+                         }
+ 
+-                        if (k == 17 && Keyboard.isKeyDown(61)) {
+-                            ;
+-                        }
+-
+-                        if (k == 18 && Keyboard.isKeyDown(61)) {
+-                            ;
+-                        }
+-
+-                        if (k == 47 && Keyboard.isKeyDown(61)) {
+-                            ;
+-                        }
+-
+-                        if (k == 38 && Keyboard.isKeyDown(61)) {
+-                            ;
+-                        }
+-
+-                        if (k == 22 && Keyboard.isKeyDown(61)) {
+-                            ;
+-                        }
+-
+                         if (k == 20 && Keyboard.isKeyDown(61)) {
+                             this.refreshResources();
+                         }
+@@ -1805,6 +1787,7 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
+                     this.playerController.onStoppedUsingItem(this.thePlayer);
+                 }
+ 
++                // Consume key presses
+                 while (this.gameSettings.keyBindAttack.isPressed()) {
+                     ;
+                 }
+@@ -1816,17 +1799,24 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
+                 while (this.gameSettings.keyBindPickBlock.isPressed()) {
+                     ;
+                 }
++
+             } else {
+                 while (this.gameSettings.keyBindAttack.isPressed()) {
+-                    this.clickMouse();
++                    if (JClient.EVENT_BUS.invokeEvent(new InputEvent.Mouse(InputEvent.MouseButton.LEFT.getId()))) {
++                        this.clickMouse();
++                    }
+                 }
+ 
+                 while (this.gameSettings.keyBindUseItem.isPressed()) {
+-                    this.rightClickMouse();
++                    if (JClient.EVENT_BUS.invokeEvent(new InputEvent.Mouse(InputEvent.MouseButton.RIGHT.getId()))) {
++                        this.rightClickMouse();
++                    }
+                 }
+ 
+                 while (this.gameSettings.keyBindPickBlock.isPressed()) {
+-                    this.middleClickMouse();
++                    if (JClient.EVENT_BUS.invokeEvent(new InputEvent.Mouse(InputEvent.MouseButton.MIDDLE.getId()))) {
++                        this.middleClickMouse();
++                    }
+                 }
+             }
+ 
+@@ -2562,10 +2552,6 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
+         return this.session;
+     }
+ 
+-    public PropertyMap getTwitchDetails() {
+-        return this.twitchDetails;
+-    }
+-
+     /**
+      * Return the player's GameProfile properties
+      */
+-- 
+2.34.1
+

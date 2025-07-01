@@ -1,0 +1,51 @@
+From d2502bd46fbcf7535a62739460a80b4f2b119200 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Tue, 24 Jun 2025 09:43:33 -0400
+Subject: [PATCH 05/60] Add step to DoubleModuleSetting
+
+---
+ .../module/config/DoubleModuleSetting.java    | 19 ++++++++++++++++++-
+ 1 file changed, 18 insertions(+), 1 deletion(-)
+
+diff --git a/src/main/java/com/jlmsz/module/config/DoubleModuleSetting.java b/src/main/java/com/jlmsz/module/config/DoubleModuleSetting.java
+index c83087c..5797a84 100644
+--- a/src/main/java/com/jlmsz/module/config/DoubleModuleSetting.java
++++ b/src/main/java/com/jlmsz/module/config/DoubleModuleSetting.java
+@@ -1,10 +1,19 @@
+ package com.jlmsz.module.config;
+ 
+ public class DoubleModuleSetting extends NumericModuleSetting<Double> {
++    private final double step;
++
+     public DoubleModuleSetting(double defaultValue,
+                                double min,
+-                               double max) {
++                               double max, double step) {
+         super(defaultValue, min, max);
++        this.step = step;
++    }
++
++    public DoubleModuleSetting(double defaultValue,
++                               double min,
++                               double max) {
++        this(defaultValue, min, max, 0.01);
+     }
+ 
+     @Override
+@@ -12,5 +21,13 @@ public class DoubleModuleSetting extends NumericModuleSetting<Double> {
+         return min <= value && value <= max;
+     }
+ 
++    @Override
++    public void setValue(Double value) {
++        System.out.println(Math.round(value / step) * step);
++        super.setValue(Math.round(value / step) * step);
++    }
+ 
++    public double getStep() {
++        return step;
++    }
+ }
+-- 
+2.34.1
+

@@ -1,0 +1,524 @@
+From d871552ae464cacc2b385544787230bc41008efa Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Mon, 30 Jun 2025 13:01:50 -0400
+Subject: [PATCH 46/60] Add alpha channel to HSV, add alpha slider to color
+ picker
+
+---
+ .../gui/component/ColorPickerComponent.java   | 134 +++++++++++++++++-
+ .../components/CrosshairPreviewComponent.java |  30 +---
+ .../jlmsz/module/impl/CrosshairModule.java    |  35 +++--
+ src/main/java/com/jlmsz/util/ColorUtil.java   |  23 +--
+ .../color/{HSVColor.java => AHSVColor.java}   |   6 +-
+ .../java/com/jlmsz/util/color/ARGBColor.java  |   5 +
+ .../jclient/shaders/hsv_slider_alpha.frag     |  46 ++++++
+ 7 files changed, 220 insertions(+), 59 deletions(-)
+ rename src/main/java/com/jlmsz/util/color/{HSVColor.java => AHSVColor.java} (55%)
+ create mode 100644 src/main/resources/assets/jclient/shaders/hsv_slider_alpha.frag
+
+diff --git a/src/main/java/com/jlmsz/gui/component/ColorPickerComponent.java b/src/main/java/com/jlmsz/gui/component/ColorPickerComponent.java
+index e4b092b..e7a8d45 100644
+--- a/src/main/java/com/jlmsz/gui/component/ColorPickerComponent.java
++++ b/src/main/java/com/jlmsz/gui/component/ColorPickerComponent.java
+@@ -5,9 +5,10 @@ import com.jlmsz.module.impl.CrosshairModule;
+ import com.jlmsz.util.ColorUtil;
+ import com.jlmsz.util.GuiUtil;
+ import com.jlmsz.util.color.ARGBColor;
+-import com.jlmsz.util.color.HSVColor;
++import com.jlmsz.util.color.AHSVColor;
+ import net.minecraft.client.Minecraft;
+ import net.minecraft.client.gui.Gui;
++import net.minecraft.client.renderer.GlStateManager;
+ import net.minecraft.util.MathHelper;
+ import org.lwjgl.BufferUtils;
+ import org.lwjgl.opengl.GL11;
+@@ -44,7 +45,7 @@ public class ColorPickerComponent extends Gui implements IComponent {
+     // fragment + vertex shader variables
+     private int boxQuadOffsetLoc;
+ 
+-    // Slider fields
++    // Hue slider fields
+     private int sliderProgramID = -1;
+     private int sliderVao = -1;
+ 
+@@ -61,21 +62,36 @@ public class ColorPickerComponent extends Gui implements IComponent {
+ 
+     private boolean clickedBox;
+     private boolean clickedSlider;
++    private boolean clickedAlphaSlider;
++
++    // Alpha slider fields
++    private int alphaSliderProgramID = -1;
++    private int alphaSliderVao = -1;
++
++    // alpha slider shader variables
++    private int alphaSliderScreenSizeLoc;
++    private int alphaSliderQuadOffsetLoc;
++    private int alphaSliderQuadSizeLoc;
++    private int alphaSliderHSVLoc;
++
++    private int alphaY;
+ 
+     public ColorPickerComponent(ColorModuleSetting setting, int x, int y) {
+         this.setting = setting;
+         this.x = x;
+         this.y = y;
+ 
+-        HSVColor initialColor = ColorUtil.rgbToHsv(setting.getValue());
++        AHSVColor initialColor = ColorUtil.ARGBToAHSV(setting.getValue());
+ //        ARGBColor color = ColorUtil.hsvToRgb(new Vector3f((float) hueY / height, (float) cursorX / boxWidth, 1f - (float) cursorY / height));
+ 
+         cursorX = (int) (initialColor.s * boxWidth);
+         cursorY = (int) ((1 - initialColor.v) * height);
+         hueY = (int) (initialColor.h * height);
++        alphaY = (int) ((1 - initialColor.a) * height);
+ 
+         initBox();
+         initSlider();
++        initAlphaSlider();
+     }
+ 
+     private void initBox() {
+@@ -156,6 +172,47 @@ public class ColorPickerComponent extends Gui implements IComponent {
+         GL30.glBindVertexArray(0);
+     }
+ 
++    private void initAlphaSlider() {
++        alphaSliderProgramID = GL20.glCreateProgram();
++        if (!loadShader(alphaSliderProgramID, "/assets/jclient/shaders/hsv_slider_alpha.frag", GL20.GL_FRAGMENT_SHADER)) {
++            System.exit(0);
++        }
++
++        if (!loadShader(alphaSliderProgramID, "/assets/jclient/shaders/hsv_box.vert", GL20.GL_VERTEX_SHADER))
++            System.exit(0);
++        GL20.glLinkProgram(alphaSliderProgramID);
++
++        alphaSliderQuadSizeLoc = GL20.glGetUniformLocation(alphaSliderProgramID, "quadSize");
++        alphaSliderQuadOffsetLoc = GL20.glGetUniformLocation(alphaSliderProgramID, "quadOffset");
++        alphaSliderScreenSizeLoc = GL20.glGetUniformLocation(alphaSliderProgramID, "screenSize");
++        alphaSliderHSVLoc = GL20.glGetUniformLocation(alphaSliderProgramID, "hsv");
++
++        FloatBuffer vertexBuffer = BufferUtils.createFloatBuffer(8); // 4 vertices * 2 floats each
++        vertexBuffer.put(new float[]{
++                0, height,
++                0, 0,
++                boxWidth, height,
++                boxWidth, 0
++        });
++
++        vertexBuffer.flip();
++
++        // Create and bind VAO and VBO
++        this.alphaSliderVao = GL30.glGenVertexArrays();
++        GL30.glBindVertexArray(alphaSliderVao);
++
++        int boxVbo = GL15.glGenBuffers();
++        GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, boxVbo);
++        GL15.glBufferData(GL15.GL_ARRAY_BUFFER, vertexBuffer, GL15.GL_STATIC_DRAW);
++
++        GL20.glEnableVertexAttribArray(0); // attribute 0 = position
++        GL20.glVertexAttribPointer(0, 2, GL11.GL_FLOAT, false, 0, 0);
++
++        // Unbind buffer
++        GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
++        GL30.glBindVertexArray(0);
++    }
++
+     private boolean loadShader(int programID, String resource, int type) {
+         try (InputStream hsvBoxStream = CrosshairModule.class.getResourceAsStream(resource)) {
+             if (hsvBoxStream == null) {
+@@ -224,14 +281,36 @@ public class ColorPickerComponent extends Gui implements IComponent {
+         GL20.glUseProgram(0);
+     }
+ 
++    private float getAlpha() {
++        return 1f - (float) alphaY / height;
++    }
++
++    private float getHue() {
++        return (float) hueY / height;
++    }
++
++    private float getSaturation() {
++        return (float) cursorX / boxWidth;
++    }
++
++    private float getValue() {
++        return 1f - (float) cursorY / height;
++    }
++
+     private void updateColor() {
+-        ARGBColor color = ColorUtil.hsvToRgb(new HSVColor((float) hueY / height, (float) cursorX / boxWidth, 1f - (float) cursorY / height));
++        float a = getAlpha();
++        float h = getHue();
++        float s = getSaturation();
++        float v = getValue();
++        ARGBColor color = ColorUtil.AHSVToARGB(new AHSVColor(a, h, s, v));
+         setting.setValue(color);
++        System.out.println("Updated: " + a + ", " + h + ", " + s + ", " + v);
++        System.out.println("Updated: " + color);
+     }
+ 
+     private void renderBorder() {
+         int border = 2;
+-        GuiUtil.drawUnscaledRect(x - border, y - border, x + boxWidth + 5 + sliderWidth + border, y + height + border, 0xFFDDDDDD);
++        GuiUtil.drawUnscaledRect(x - border, y - border, x + boxWidth + 5 * 2 + sliderWidth * 2 + border, y + height + border, 0xFFDDDDDD);
+     }
+ 
+     private void renderCursor(int mouseX, int mouseY) {
+@@ -245,7 +324,7 @@ public class ColorPickerComponent extends Gui implements IComponent {
+         GuiUtil.drawUnscaledRect(x + cursorX - 3, y + cursorY - 3, x + cursorX + 3, y + cursorY + 3, 0xFFFFFFFF);
+     }
+ 
+-    private void renderHueSlider(int mouseX, int mouseY) {
++    private void renderHueHandle(int mouseX, int mouseY) {
+         if (clickedSlider) {
+             hueY = MathHelper.clamp_int(mouseY - y, 0, height);
+             updateColor();
+@@ -256,6 +335,38 @@ public class ColorPickerComponent extends Gui implements IComponent {
+         GuiUtil.drawUnscaledRect(x + 200 + 5, y + hueY - 5, x + 200 + 5 + sliderWidth, y + hueY + 5, 0xFFFFFFFF);
+     }
+ 
++    private void renderAlphaHandle(int mouseX, int mouseY) {
++        if (clickedAlphaSlider) {
++            alphaY = MathHelper.clamp_int(mouseY - y, 0, height);
++            updateColor();
++        }
++
++        GuiUtil.drawUnscaledRect(x + 200 + 5 + sliderWidth + 5 - 3, y + alphaY - 5 - 3, x + 200 + 8 + sliderWidth + sliderWidth + 5 + 3, y + alphaY + 5 + 3, 0xFF000000);
++
++        GuiUtil.drawUnscaledRect(x + 200 + 5 + sliderWidth + 5, y + alphaY - 5, x + 200 + 5 + sliderWidth + sliderWidth + 5, y + alphaY + 5, 0xFFFFFFFF);
++    }
++
++    private void renderAlphaSlider() {
++        GlStateManager.enableBlend();
++        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
++        GlStateManager.color(1, 1, 1, 0.5f);
++        GL20.glUseProgram(alphaSliderProgramID);
++        GL30.glBindVertexArray(alphaSliderVao);
++
++        // Set uniforms
++        GL20.glUniform2f(alphaSliderQuadOffsetLoc, x + 200 + 5 + sliderWidth + 5, mc.displayHeight - y - height);
++        GL20.glUniform2f(alphaSliderQuadSizeLoc, sliderWidth, height); // <-- THIS IS CRUCIAL
++        GL20.glUniform2f(alphaSliderScreenSizeLoc, mc.displayWidth, mc.displayHeight);
++        GL20.glUniform3f(alphaSliderHSVLoc, getHue(), getSaturation(), getValue());
++
++        GL11.glDrawArrays(GL11.GL_TRIANGLE_STRIP, 0, 4);
++
++        GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
++        GL30.glBindVertexArray(0);
++        GL20.glUseProgram(0);
++        GlStateManager.disableBlend();
++    }
++
+     @Override
+     public void renderComponent(int mouseX, int mouseY) {
+         renderBorder();
+@@ -264,7 +375,11 @@ public class ColorPickerComponent extends Gui implements IComponent {
+         renderCursor(mouseX, mouseY);
+ 
+         renderSlider();
+-        renderHueSlider(mouseX, mouseY);
++
++        renderAlphaSlider();
++        renderHueHandle(mouseX, mouseY);
++        renderAlphaHandle(mouseX, mouseY);
++
+     }
+ 
+     @Override
+@@ -276,6 +391,7 @@ public class ColorPickerComponent extends Gui implements IComponent {
+     public void mouseReleased(int mouseX, int mouseY, int state) {
+         clickedBox = false;
+         clickedSlider = false;
++        clickedAlphaSlider = false;
+     }
+ 
+     @Override
+@@ -288,6 +404,10 @@ public class ColorPickerComponent extends Gui implements IComponent {
+         if (mouseX >= x + 200 + 5 && mouseX <= x + 200 + 5 + sliderWidth && mouseY >= y && mouseY <= y + height) {
+             clickedSlider = true;
+         }
++
++        if (mouseX >= x + 200 + 5 + sliderWidth + 5 && mouseX <= x + 200 + 5 + sliderWidth + sliderWidth + 5 && mouseY >= y && mouseY <= y + height) {
++            clickedAlphaSlider = true;
++        }
+     }
+ 
+     @Override
+diff --git a/src/main/java/com/jlmsz/gui/settings/components/CrosshairPreviewComponent.java b/src/main/java/com/jlmsz/gui/settings/components/CrosshairPreviewComponent.java
+index ccc3462..f681fd0 100644
+--- a/src/main/java/com/jlmsz/gui/settings/components/CrosshairPreviewComponent.java
++++ b/src/main/java/com/jlmsz/gui/settings/components/CrosshairPreviewComponent.java
+@@ -1,15 +1,12 @@
+ package com.jlmsz.gui.settings.components;
+ 
+ import com.jlmsz.gui.component.IComponent;
+-import com.jlmsz.module.config.CrosshairModuleSetting;
+ import com.jlmsz.module.config.DoubleModuleSetting;
+ import com.jlmsz.module.impl.CrosshairModule;
+-import com.jlmsz.util.color.ARGBColor;
+ import net.minecraft.client.Minecraft;
+ import net.minecraft.client.gui.Gui;
+ import net.minecraft.client.gui.ScaledResolution;
+ import net.minecraft.client.renderer.GlStateManager;
+-import org.lwjgl.opengl.GL11;
+ 
+ public class CrosshairPreviewComponent extends Gui implements IComponent {
+     private final CrosshairModule module;
+@@ -37,34 +34,11 @@ public class CrosshairPreviewComponent extends Gui implements IComponent {
+         GlStateManager.popMatrix();
+ 
+         DoubleModuleSetting scaleSetting = (DoubleModuleSetting) module.getSettings().get("Crosshair Scale");
+-        CrosshairModuleSetting type = (CrosshairModuleSetting) module.getSettings().get("Crosshair Type");
+-        double scale = scaleSetting.getValue();
++        float scale = (float) (double) scaleSetting.getValue();
+         int mcScale = sr.getScaleFactor();
+         scale *= mcScale;
+ 
+-        CrosshairModule.CrosshairOffset offset = CrosshairModule.crosshairOffsets.get(type.getValue());
+-        this.mc.getTextureManager().bindTexture(CrosshairModule.crosshairs);
+-
+-        GlStateManager.pushMatrix();
+-        GlStateManager.scale(scale, scale, 1D);
+-
+-        if (module.alphaEffect.getValue()) {
+-            GlStateManager.enableAlpha();
+-            GlStateManager.tryBlendFuncSeparate(775, 769, 1, 0);
+-            GlStateManager.enableBlend();
+-        }
+-        GlStateManager.alphaFunc(GL11.GL_GREATER, 0.0f);
+-
+-        ARGBColor argbColor = module.color.getValue();
+-        GlStateManager.color(argbColor.r, argbColor.g, argbColor.b, 1f);
+-        this.mc.ingameGUI.drawTexturedModalRect((float) ((x + width / 2f - (9f * scale) / 2) / scale), (float) ((y + height / 2f - (9f * scale) / 2) / scale), offset.x, offset.y, 9, 9);
+-
+-        if (module.alphaEffect.getValue()) {
+-            GlStateManager.disableBlend();
+-            GlStateManager.disableAlpha();
+-        }
+-        GlStateManager.popMatrix();
+-
++        module.renderCrosshair((x + width / 2f - (9f * scale) / 2f), (y + height / 2f - (9f * scale) / 2f), (float) scale);
+     }
+ 
+     @Override
+diff --git a/src/main/java/com/jlmsz/module/impl/CrosshairModule.java b/src/main/java/com/jlmsz/module/impl/CrosshairModule.java
+index 6b3176f..72022ad 100644
+--- a/src/main/java/com/jlmsz/module/impl/CrosshairModule.java
++++ b/src/main/java/com/jlmsz/module/impl/CrosshairModule.java
+@@ -43,37 +43,50 @@ public class CrosshairModule extends Module {
+         JClient.EVENT_BUS.registerListener(this);
+         addSetting("Crosshair Scale", crosshairScale);
+         addSetting("Crosshair Type", crosshair = new CrosshairModuleSetting(0, crosshairOffsets.size()));
+-        addSetting("Alpha Effect", alphaEffect = new BooleanModuleSetting(true));
++        addSetting("Vanilla Blending", alphaEffect = new BooleanModuleSetting(true));
+         addSetting("Color", color = new ColorModuleSetting(new ARGBColor(1f, 1f, 1f, 1f)));
+     }
+ 
+-    @EventHandler
+-    public void onCrosshairRender(CrosshairRenderEvent event) {
+-        if (!this.isEnabled()) return;
+-        event.setCancelled(true);
+-        ScaledResolution sr = new ScaledResolution(mc);
++    public void renderCrosshair(float x, float y, float scale) {
+         this.mc.getTextureManager().bindTexture(crosshairs);
+ 
+         CrosshairOffset offset = crosshairOffsets.get(crosshair.getValue());
+ 
+         GlStateManager.pushMatrix();
+-        double scale = crosshairScale.getValue();
+         GlStateManager.scale(scale, scale, 1D);
+ 
++        GlStateManager.enableBlend();
++
++        ARGBColor argbColor = color.getValue();
++
+         if (alphaEffect.getValue()) {
++
+             GlStateManager.tryBlendFuncSeparate(775, 769, 1, 0);
+             GlStateManager.enableAlpha();
++            GlStateManager.color(argbColor.r, argbColor.g, argbColor.b, 1f);
++        } else {
++            GlStateManager.color(argbColor.r, argbColor.g, argbColor.b, argbColor.a);
++
+         }
+ 
+-        ARGBColor argbColor = color.getValue();
+-        GlStateManager.color(argbColor.r, argbColor.g, argbColor.b, 1f);
+-        this.mc.ingameGUI.drawTexturedModalRect((int) ((sr.getScaledWidth() / 2D - 4 * scale) / scale), (int) ((sr.getScaledHeight() / 2D - 4 * scale) / scale), offset.x, offset.y, 9, 9);
+-        GlStateManager.color(1f, 1f, 1f);
++        this.mc.ingameGUI.drawTexturedModalRect((x / scale), (y / scale), offset.x, offset.y, 9, 9);
++        GlStateManager.color(1f, 1f, 1f, 1f);
++        GlStateManager.disableBlend();
+         GlStateManager.popMatrix();
+ 
+         this.mc.getTextureManager().bindTexture(GuiIngame.icons);
+     }
+ 
++    @EventHandler
++    public void onCrosshairRender(CrosshairRenderEvent event) {
++        if (!this.isEnabled()) return;
++        event.setCancelled(true);
++        ScaledResolution sr = new ScaledResolution(mc);
++        double scale = crosshairScale.getValue();
++
++        renderCrosshair((int) ((sr.getScaledWidth() / 2D - 4 * scale)), (int) (sr.getScaledHeight() / 2D - 4 * scale), (float) scale);
++    }
++
+     public static class CrosshairOffset {
+         public int x;
+         public int y;
+diff --git a/src/main/java/com/jlmsz/util/ColorUtil.java b/src/main/java/com/jlmsz/util/ColorUtil.java
+index d6fe909..3ff46f1 100644
+--- a/src/main/java/com/jlmsz/util/ColorUtil.java
++++ b/src/main/java/com/jlmsz/util/ColorUtil.java
+@@ -1,19 +1,20 @@
+ package com.jlmsz.util;
+ 
+ import com.jlmsz.util.color.ARGBColor;
+-import com.jlmsz.util.color.HSVColor;
++import com.jlmsz.util.color.AHSVColor;
+ 
+ import javax.vecmath.Vector3f;
+ 
+ public class ColorUtil {
+ 
+-    public static ARGBColor hsvToRgb(HSVColor hsv) {
++    public static ARGBColor AHSVToARGB(AHSVColor hsv) {
++        float a = hsv.a;
+         float h = hsv.h;
+         float s = hsv.s;
+         float v = hsv.v;
+ 
+         if (s == 0.0) {
+-            return new ARGBColor(1.0f, v, v, v);
++            return new ARGBColor(a, v, v, v);
+         }
+ 
+         h *= 6.0f;
+@@ -24,15 +25,15 @@ public class ColorUtil {
+         float q = v * (1.0f - s * f);
+         float t = v * (1.0f - s * (1.0f - f));
+ 
+-        if (sector_int % 6 == 0) return new ARGBColor(1.0f, v, t, p);
+-        else if (sector_int % 6 == 1) return new ARGBColor(1.0f, q, v, p);
+-        else if (sector_int % 6 == 2) return new ARGBColor(1.0f, p, v, t);
+-        else if (sector_int % 6 == 3) return new ARGBColor(1.0f, p, q, v);
+-        else if (sector_int % 6 == 4) return new ARGBColor(1.0f, t, p, v);
+-        else return new ARGBColor(1.0f, v, p, q);
++        if (sector_int % 6 == 0) return new ARGBColor(a, v, t, p);
++        else if (sector_int % 6 == 1) return new ARGBColor(a, q, v, p);
++        else if (sector_int % 6 == 2) return new ARGBColor(a, p, v, t);
++        else if (sector_int % 6 == 3) return new ARGBColor(a, p, q, v);
++        else if (sector_int % 6 == 4) return new ARGBColor(a, t, p, v);
++        else return new ARGBColor(a, v, p, q);
+     }
+ 
+-    public static HSVColor rgbToHsv(ARGBColor rgb) {
++    public static AHSVColor ARGBToAHSV(ARGBColor rgb) {
+         float r = rgb.r;
+         float g = rgb.g;
+         float b = rgb.b;
+@@ -62,7 +63,7 @@ public class ColorUtil {
+             s = 0.0f;
+         }
+ 
+-        return new HSVColor(h, s, max);
++        return new AHSVColor(rgb.a, h, s, max);
+     }
+ 
+ 
+diff --git a/src/main/java/com/jlmsz/util/color/HSVColor.java b/src/main/java/com/jlmsz/util/color/AHSVColor.java
+similarity index 55%
+rename from src/main/java/com/jlmsz/util/color/HSVColor.java
+rename to src/main/java/com/jlmsz/util/color/AHSVColor.java
+index 2338879..6fd8d3e 100644
+--- a/src/main/java/com/jlmsz/util/color/HSVColor.java
++++ b/src/main/java/com/jlmsz/util/color/AHSVColor.java
+@@ -1,11 +1,13 @@
+ package com.jlmsz.util.color;
+ 
+-public class HSVColor {
++public class AHSVColor {
++    public float a;
+     public float h;
+     public float s;
+     public float v;
+ 
+-    public HSVColor(float h, float s, float v) {
++    public AHSVColor(float a, float h, float s, float v) {
++        this.a = a;
+         this.h = h;
+         this.s = s;
+         this.v = v;
+diff --git a/src/main/java/com/jlmsz/util/color/ARGBColor.java b/src/main/java/com/jlmsz/util/color/ARGBColor.java
+index 4a332d1..573765d 100644
+--- a/src/main/java/com/jlmsz/util/color/ARGBColor.java
++++ b/src/main/java/com/jlmsz/util/color/ARGBColor.java
+@@ -12,4 +12,9 @@ public class ARGBColor {
+         this.g = g;
+         this.b = b;
+     }
++
++    @Override
++    public String toString() {
++        return String.format("ARGBColor {a=%f, r=%f, g=%f, b=%f}", a, r, g, b);
++    }
+ }
+\ No newline at end of file
+diff --git a/src/main/resources/assets/jclient/shaders/hsv_slider_alpha.frag b/src/main/resources/assets/jclient/shaders/hsv_slider_alpha.frag
+new file mode 100644
+index 0000000..7196d9f
+--- /dev/null
++++ b/src/main/resources/assets/jclient/shaders/hsv_slider_alpha.frag
+@@ -0,0 +1,46 @@
++#version 330
++
++uniform vec2 quadOffset;   // Screen position of quad (bottom-left corner)
++uniform vec2 quadSize;  // Size of quad in pixels
++uniform vec3 hsv;
++out vec4 fragColor;
++
++vec3 hsvToRgb(in vec3 hsv)
++{
++    float h = hsv.x;
++    float s = hsv.y;
++    float v = hsv.z;
++
++    if (s == 0.0) {
++        return vec3(v, v, v);
++    }
++
++    h *= 6.0;
++    float sector = floor(h);
++    int sector_int = int(sector);
++    float f = h - sector;
++    float p = v * (1.0 - s);
++    float q = v * (1.0 - s * f);
++    float t = v * (1.0 - s * (1.0 - f));
++
++    if (sector_int % 6 == 0) return vec3(v, t, p);
++    else if (sector_int % 6 == 1) return vec3(q, v, p);
++    else if (sector_int % 6 == 2) return vec3(p, v, t);
++    else if (sector_int % 6 == 3) return vec3(p, q, v);
++    else if (sector_int % 6 == 4) return vec3(t, p, v);
++    else return vec3(v, p, q);
++}
++
++void main()
++{
++    vec2 local = (gl_FragCoord.xy - quadOffset) / quadSize;
++
++    if (local.x < 0.0 || local.x > 1.0 || local.y < 0.0 || local.y > 1.0) {
++        discard;
++    }
++
++    float a = local.y;
++
++    vec3 rgb = hsvToRgb(hsv);
++    fragColor = vec4(rgb, a);
++}
+-- 
+2.34.1
+

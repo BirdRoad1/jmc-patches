@@ -1,0 +1,44 @@
+From 787a3804c697774cce2531dcc57ef19c2cecd01d Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sun, 29 Jun 2025 03:01:08 -0400
+Subject: [PATCH 31/60] scroll fix, remove uneeded fields
+
+---
+ .../jlmsz/gui/settings/view/base/ScrollableView.java  | 11 ++---------
+ 1 file changed, 2 insertions(+), 9 deletions(-)
+
+diff --git a/src/main/java/com/jlmsz/gui/settings/view/base/ScrollableView.java b/src/main/java/com/jlmsz/gui/settings/view/base/ScrollableView.java
+index 68c012f..c6fae29 100644
+--- a/src/main/java/com/jlmsz/gui/settings/view/base/ScrollableView.java
++++ b/src/main/java/com/jlmsz/gui/settings/view/base/ScrollableView.java
+@@ -6,17 +6,10 @@ import org.lwjgl.opengl.GL11;
+ 
+ public abstract class ScrollableView extends View {
+     protected int scrollY = 0;
+-    protected final int x;
+-    protected final int y;
+-    protected final int width;
+-    protected final int height;
+     private int maxScroll;
+ 
+     public ScrollableView(int x, int y, int width, int height) {
+-        this.x = x;
+-        this.y = y;
+-        this.width = width;
+-        this.height = height;
++        super(x, y, width, height);
+     }
+ 
+     @Override
+@@ -48,7 +41,7 @@ public abstract class ScrollableView extends View {
+     }
+ 
+     protected void setMaxScroll(int maxScroll) {
+-        if (maxScroll > 0) {
++        if (maxScroll >= 0) {
+             this.maxScroll = maxScroll;
+         }
+     }
+-- 
+2.34.1
+

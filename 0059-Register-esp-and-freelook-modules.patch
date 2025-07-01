@@ -1,0 +1,25 @@
+From 86fcfda3f1079d6e44f276e298cf3ac6fac0a2fd Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Mon, 30 Jun 2025 13:09:16 -0400
+Subject: [PATCH 59/60] Register esp and freelook modules
+
+---
+ src/main/java/com/jlmsz/module/ModuleRegistry.java | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/main/java/com/jlmsz/module/ModuleRegistry.java b/src/main/java/com/jlmsz/module/ModuleRegistry.java
+index 117c493..663a141 100644
+--- a/src/main/java/com/jlmsz/module/ModuleRegistry.java
++++ b/src/main/java/com/jlmsz/module/ModuleRegistry.java
+@@ -25,6 +25,8 @@ public class ModuleRegistry {
+         registerModule(new PacketLogger());
+         registerModule(new CPSModule());
+         registerModule(new KeystrokesModule());
++        registerModule(new ESPModule());
++        registerModule(new FreeLookModule());
+     }
+ 
+     private static void registerModule(Module module) {
+-- 
+2.34.1
+

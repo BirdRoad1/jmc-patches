@@ -1,0 +1,41 @@
+From f88ce49e318a3268fef6d5445c2a0fa3726b1623 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sun, 29 Jun 2025 03:02:55 -0400
+Subject: [PATCH 35/60] Create GuiRenderEvent
+
+---
+ .../java/net/minecraft/client/renderer/EntityRenderer.java    | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/main/java/net/minecraft/client/renderer/EntityRenderer.java b/src/main/java/net/minecraft/client/renderer/EntityRenderer.java
+index 2dcc2ac..d7d4578 100644
+--- a/src/main/java/net/minecraft/client/renderer/EntityRenderer.java
++++ b/src/main/java/net/minecraft/client/renderer/EntityRenderer.java
+@@ -4,6 +4,7 @@ import com.google.common.base.Predicate;
+ import com.google.common.base.Predicates;
+ import com.google.gson.JsonSyntaxException;
+ import com.jlmsz.JClient;
++import com.jlmsz.event.impl.GuiRenderEvent;
+ import com.jlmsz.event.impl.RenderEvent;
+ import com.jlmsz.util.renderer.IItemRenderer;
+ import net.minecraft.block.Block;
+@@ -1192,7 +1193,6 @@ public class EntityRenderer implements IResourceManagerReloadListener {
+                 if (!this.mc.gameSettings.thirdPersonView || this.mc.currentScreen != null) {
+                     GlStateManager.alphaFunc(516, 0.1F);
+                     this.mc.ingameGUI.renderGameOverlay(partialTicks);
+-
+                     if (this.mc.gameSettings.ofShowFps && !this.mc.gameSettings.showDebugProfilerChart) {
+                         Config.drawFps();
+                     }
+@@ -1202,6 +1202,8 @@ public class EntityRenderer implements IResourceManagerReloadListener {
+                     }
+                 }
+ 
++                JClient.EVENT_BUS.invokeEvent(new GuiRenderEvent());
++
+                 this.mc.mcProfiler.endSection();
+             } else {
+                 GlStateManager.viewport(0, 0, this.mc.displayWidth, this.mc.displayHeight);
+-- 
+2.34.1
+

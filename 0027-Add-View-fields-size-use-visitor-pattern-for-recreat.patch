@@ -1,0 +1,127 @@
+From 867a4dde50f9314aae25c69883e1f73609c117dc Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sun, 29 Jun 2025 02:59:25 -0400
+Subject: [PATCH 27/60] Add View fields size, use visitor pattern for
+ recreate() method, recreate module list view.
+
+---
+ .../settings/view/ConfigureModuleView.java    |  7 +++++
+ .../jlmsz/gui/settings/view/base/View.java    | 28 +++++++++++++++++++
+ .../settings/view/factory/ViewFactory.java    | 11 +++++++-
+ 3 files changed, 45 insertions(+), 1 deletion(-)
+
+diff --git a/src/main/java/com/jlmsz/gui/settings/view/ConfigureModuleView.java b/src/main/java/com/jlmsz/gui/settings/view/ConfigureModuleView.java
+index 41fda68..638d030 100644
+--- a/src/main/java/com/jlmsz/gui/settings/view/ConfigureModuleView.java
++++ b/src/main/java/com/jlmsz/gui/settings/view/ConfigureModuleView.java
+@@ -6,6 +6,8 @@ import com.jlmsz.gui.component.IComponent;
+ import com.jlmsz.gui.component.SliderComponent;
+ import com.jlmsz.gui.settings.components.*;
+ import com.jlmsz.gui.settings.view.base.ScrollableView;
++import com.jlmsz.gui.settings.view.base.View;
++import com.jlmsz.gui.settings.view.factory.ViewFactory;
+ import com.jlmsz.module.Module;
+ import com.jlmsz.module.config.*;
+ import com.jlmsz.module.impl.CrosshairModule;
+@@ -105,6 +107,11 @@ public class ConfigureModuleView extends ScrollableView {
+         }
+     }
+ 
++    @Override
++    public View recreate(ViewFactory factory) {
++        return factory.createConfigureModuleView(module);
++    }
++
+     private static class ComponentSettingPair {
+         public String name;
+         public IComponent component;
+diff --git a/src/main/java/com/jlmsz/gui/settings/view/base/View.java b/src/main/java/com/jlmsz/gui/settings/view/base/View.java
+index 6bb1465..d270914 100644
+--- a/src/main/java/com/jlmsz/gui/settings/view/base/View.java
++++ b/src/main/java/com/jlmsz/gui/settings/view/base/View.java
+@@ -1,5 +1,6 @@
+ package com.jlmsz.gui.settings.view.base;
+ 
++import com.jlmsz.gui.settings.view.factory.ViewFactory;
+ import net.minecraft.client.Minecraft;
+ import net.minecraft.client.gui.Gui;
+ 
+@@ -7,6 +8,17 @@ import java.io.IOException;
+ 
+ public abstract class View extends Gui {
+     protected Minecraft mc = Minecraft.getMinecraft();
++    protected int x;
++    protected int y;
++    protected int width;
++    protected int height;
++
++    public View(int x, int y, int width, int height) {
++        this.x = x;
++        this.y = y;
++        this.width = width;
++        this.height = height;
++    }
+ 
+     public abstract void renderPanel(int mouseX, int mouseY);
+ 
+@@ -14,5 +26,21 @@ public abstract class View extends Gui {
+ 
+     public abstract void mouseReleased(int mouseX, int mouseY, int state);
+ 
++    public abstract View recreate(ViewFactory factory);
+ 
++    public void setX(int x) {
++        this.x = x;
++    }
++
++    public void setY(int y) {
++        this.y = y;
++    }
++
++    public void setWidth(int width) {
++        this.width = width;
++    }
++
++    public void setHeight(int height) {
++        this.height = height;
++    }
+ }
+diff --git a/src/main/java/com/jlmsz/gui/settings/view/factory/ViewFactory.java b/src/main/java/com/jlmsz/gui/settings/view/factory/ViewFactory.java
+index 49580f8..bec4882 100644
+--- a/src/main/java/com/jlmsz/gui/settings/view/factory/ViewFactory.java
++++ b/src/main/java/com/jlmsz/gui/settings/view/factory/ViewFactory.java
+@@ -1,16 +1,20 @@
+ package com.jlmsz.gui.settings.view.factory;
+ 
++import com.jlmsz.gui.interfaces.IPanelSwitcher;
+ import com.jlmsz.gui.settings.view.ConfigureModuleView;
++import com.jlmsz.gui.settings.view.ModuleListView;
+ import com.jlmsz.module.Module;
+ 
+ public class ViewFactory {
+ 
++    private final IPanelSwitcher switcher;
+     private final int x;
+     private final int y;
+     private final int width;
+     private final int height;
+ 
+-    public ViewFactory(int x, int y, int width, int height) {
++    public ViewFactory(IPanelSwitcher switcher, int x, int y, int width, int height) {
++        this.switcher = switcher;
+         this.x = x;
+         this.y = y;
+         this.width = width;
+@@ -20,4 +24,9 @@ public class ViewFactory {
+     public ConfigureModuleView createConfigureModuleView(Module module) {
+         return new ConfigureModuleView(module, x, y, width, height);
+     }
++
++    public ModuleListView createModuleListView() {
++        return new ModuleListView(switcher, this, x, y, width, height);
++    }
++
+ }
+-- 
+2.34.1
+

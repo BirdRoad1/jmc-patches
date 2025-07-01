@@ -1,0 +1,24 @@
+From a7723bec6bd337c3a8d1027d3da05152b9f2636c Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Mon, 30 Jun 2025 13:02:50 -0400
+Subject: [PATCH 47/60] Fix auto-gg skywars regex
+
+---
+ src/main/resources/assets/jclient/data/auto_gg.json | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/main/resources/assets/jclient/data/auto_gg.json b/src/main/resources/assets/jclient/data/auto_gg.json
+index 80be283..0e79cb9 100644
+--- a/src/main/resources/assets/jclient/data/auto_gg.json
++++ b/src/main/resources/assets/jclient/data/auto_gg.json
+@@ -1,5 +1,5 @@
+ {
+   "lines": [
+-    "§r§f                    §r§e§l1st Killer §r§7- .*§r§f§r§e §r§7- .*§r"
++    "^§r§f[ ]+§r§e§l1st Killer §r§7- .*"
+   ]
+ }
+\ No newline at end of file
+-- 
+2.34.1
+

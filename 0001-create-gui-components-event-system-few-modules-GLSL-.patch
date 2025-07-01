@@ -1,0 +1,57 @@
+From 13ded36b9322a4bab052278d9c7fdc08de370c99 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sun, 22 Jun 2025 22:26:16 -0400
+Subject: [PATCH 01/60] create gui, components, event system, few modules, GLSL
+ shader
+
+---
+ .../assets/jclient/textures/gui/crosshairs.png    | Bin 0 -> 262 bytes
+ .../assets/jclient/textures/gui/debug.png         | Bin 0 -> 120 bytes
+ .../resources/assets/jclient/textures/gui/ui.png  | Bin 0 -> 234 bytes
+ 3 files changed, 0 insertions(+), 0 deletions(-)
+ create mode 100644 src/main/resources/assets/jclient/textures/gui/crosshairs.png
+ create mode 100644 src/main/resources/assets/jclient/textures/gui/debug.png
+ create mode 100644 src/main/resources/assets/jclient/textures/gui/ui.png
+
+diff --git a/src/main/resources/assets/jclient/textures/gui/crosshairs.png b/src/main/resources/assets/jclient/textures/gui/crosshairs.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..7be9da90baba984bab59f07f0ad2f108dddf571d
+GIT binary patch
+literal 262
+zcmeAS@N?(olHy`uVBq!ia0y~yU<5K585o&?RN5XZRS>T@$lZzY=1HA;AcwQSBeIx*
+zfm;}a85w5HkpK#^1^9%x0_p$%|1Z5c|1OZlR1)MD%<w;YqS96%uiMkbF{EP7+Y1|c
+z9RdW7ef)0XqRADg!IQwoHc{db!?J~f8yQ<oTY?U8D9xMq-RtcCS=#TW>zAvymU6~=
+z3SL_&W|3!PSF3TY{DFLym~WAvy@QO2_x*RzWh~w+NQWFsoBlK0>1pXN*`Dwj{}VKT
+c7UBZ+jnbkKGK{hUO=ch^p00i_>zopr0M~3vu>b%7
+
+literal 0
+HcmV?d00001
+
+diff --git a/src/main/resources/assets/jclient/textures/gui/debug.png b/src/main/resources/assets/jclient/textures/gui/debug.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..2b4effe5b2262cf937289330a4439491493a5137
+GIT binary patch
+literal 120
+zcmeAS@N?(olHy`uVBq!ia0vp^_CU<Z$P6U+Z%WevQjEnx?oNz1PwLczWC}bYiy0WW
+zg+Z8+Vb&Z8pdfRAPl)S(1_sGToaR6-pQnpsNX4Awlm;d@Ekg#zXAE3|Pqxkg$}o7k
+L`njxgN@xNALysA!
+
+literal 0
+HcmV?d00001
+
+diff --git a/src/main/resources/assets/jclient/textures/gui/ui.png b/src/main/resources/assets/jclient/textures/gui/ui.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..6ba03a5ac37e356f3d1a52df65cde5246428f5b0
+GIT binary patch
+literal 234
+zcmeAS@N?(olHy`uVBq!ia0y~yU<5K58JL)Xl%kBoR}il_$lZzY=1HA;AcwQSBeIx*
+zfm;}a85w5HkpKw>_=LDhN=gEmiHV7_UtCTAS<EFte!>44{%5|C-v{Jod%8G=RLpsM
+z*^rk(fyeb=61)A6g92ilnN3Zb4DLw(yLS85BeO+er(YU>V`5;CXNdeccXc~ZAIabY
+Zhs?B!BF3Z}+hjp{Jzf1=);T3K0RZ&%G-3b%
+
+literal 0
+HcmV?d00001
+
+-- 
+2.34.1
+

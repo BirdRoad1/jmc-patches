@@ -1,0 +1,382 @@
+From e4b50e730e51200d9d964885682ddc54ac82c50f Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Mon, 30 Jun 2025 13:04:48 -0400
+Subject: [PATCH 49/60] Add freelook module
+
+---
+ .../com/jlmsz/module/impl/FreeLookModule.java |  89 ++++++++++++++
+ .../client/renderer/EntityRenderer.java       | 111 +++++++++++-------
+ 2 files changed, 158 insertions(+), 42 deletions(-)
+ create mode 100644 src/main/java/com/jlmsz/module/impl/FreeLookModule.java
+
+diff --git a/src/main/java/com/jlmsz/module/impl/FreeLookModule.java b/src/main/java/com/jlmsz/module/impl/FreeLookModule.java
+new file mode 100644
+index 0000000..c439ffd
+--- /dev/null
++++ b/src/main/java/com/jlmsz/module/impl/FreeLookModule.java
+@@ -0,0 +1,89 @@
++package com.jlmsz.module.impl;
++
++import com.jlmsz.JClient;
++import com.jlmsz.event.EventHandler;
++import com.jlmsz.event.impl.OrientCameraEvent;
++import com.jlmsz.module.Module;
++import com.jlmsz.module.ModuleCategory;
++import net.minecraft.util.MathHelper;
++import org.lwjgl.input.Keyboard;
++
++public class FreeLookModule extends Module {
++    private boolean headLocked = true;
++    public float rotationPitch;
++    private float rotationYaw;
++    public float prevRotationPitch;
++    private float prevRotationYaw;
++    private int lastPerspective = -1;
++
++    public FreeLookModule() {
++        super("Freelook", "Look around you without turning your head", ModuleCategory.RENDER);
++        JClient.EVENT_BUS.registerListener(this);
++    }
++
++    @EventHandler
++    public void onRender(OrientCameraEvent.Pre event) {
++        if (!this.isEnabled()) {
++            return;
++        }
++
++        if (Keyboard.isKeyDown(Keyboard.KEY_LMENU)) {
++            if (lastPerspective == -1) {
++                lastPerspective = mc.gameSettings.perspective;
++            }
++            mc.gameSettings.perspective = 1;
++            headLocked = true;
++        } else {
++            if (lastPerspective != -1) {
++                mc.gameSettings.perspective = lastPerspective;
++                lastPerspective = -1;
++            }
++            headLocked = false;
++            rotationPitch = mc.thePlayer.rotationPitch;
++            rotationYaw = mc.thePlayer.rotationYaw;
++            prevRotationYaw = mc.thePlayer.prevRotationYaw;
++            prevRotationPitch = mc.thePlayer.prevRotationPitch;
++        }
++    }
++
++    public boolean isHeadLocked() {
++        return headLocked;
++    }
++
++    public float getRotationPitch() {
++        return rotationPitch;
++    }
++
++    public float getRotationYaw() {
++        return rotationYaw;
++    }
++
++    public void setAngles(float yaw, float pitch) {
++        float oldPitch = this.rotationPitch;
++        float oldYaw = this.rotationYaw;
++        this.rotationYaw = (float) ((double) this.rotationYaw + (double) yaw * 0.15D);
++        this.rotationPitch = (float) ((double) this.rotationPitch - (double) pitch * 0.15D);
++        this.rotationPitch = MathHelper.clamp_float(this.rotationPitch, -90.0F, 90.0F);
++        this.prevRotationPitch += this.rotationPitch - oldPitch;
++        this.prevRotationYaw += this.rotationYaw - oldYaw;
++    }
++
++    public float getPrevRotationPitch() {
++        return prevRotationPitch;
++    }
++
++    public float getPrevRotationYaw() {
++        return prevRotationYaw;
++    }
++
++    @Override
++    public void setEnabled(boolean enabled) {
++        if (!enabled) {
++            if (lastPerspective != -1) {
++                mc.gameSettings.perspective = lastPerspective;
++                lastPerspective = -1;
++            }
++        }
++        super.setEnabled(enabled);
++    }
++}
+diff --git a/src/main/java/net/minecraft/client/renderer/EntityRenderer.java b/src/main/java/net/minecraft/client/renderer/EntityRenderer.java
+index d7d4578..2fa49f0 100644
+--- a/src/main/java/net/minecraft/client/renderer/EntityRenderer.java
++++ b/src/main/java/net/minecraft/client/renderer/EntityRenderer.java
+@@ -5,7 +5,10 @@ import com.google.common.base.Predicates;
+ import com.google.gson.JsonSyntaxException;
+ import com.jlmsz.JClient;
+ import com.jlmsz.event.impl.GuiRenderEvent;
++import com.jlmsz.event.impl.OrientCameraEvent;
+ import com.jlmsz.event.impl.RenderEvent;
++import com.jlmsz.module.ModuleRegistry;
++import com.jlmsz.module.impl.FreeLookModule;
+ import com.jlmsz.util.renderer.IItemRenderer;
+ import net.minecraft.block.Block;
+ import net.minecraft.block.BlockBed;
+@@ -374,7 +377,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
+         this.fogColor2 = this.fogColor1;
+         this.thirdPersonDistanceTemp = this.thirdPersonDistance;
+ 
+-        if (this.mc.gameSettings.debugCamEnable) {
++        if (this.mc.gameSettings.smoothCamEnabled) {
+             float f = this.mc.gameSettings.mouseSensitivity * 0.6F + 0.2F;
+             float f1 = f * f * f * 8.0F;
+             this.smoothCamFilterX = this.mouseFilterXAxis.smooth(this.smoothCamYaw, 0.05F * f1);
+@@ -579,8 +582,8 @@ public class EntityRenderer implements IResourceManagerReloadListener {
+             if (flag) {
+                 if (!Config.zoomMode) {
+                     Config.zoomMode = true;
+-                    Config.zoomSmoothCamera = this.mc.gameSettings.debugCamEnable;
+-                    this.mc.gameSettings.debugCamEnable = true;
++                    Config.zoomSmoothCamera = this.mc.gameSettings.smoothCamEnabled;
++                    this.mc.gameSettings.smoothCamEnabled = true;
+                     this.mc.renderGlobal.displayListEntitiesDirty = true;
+                 }
+ 
+@@ -589,7 +592,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
+                 }
+             } else if (Config.zoomMode) {
+                 Config.zoomMode = false;
+-                this.mc.gameSettings.debugCamEnable = Config.zoomSmoothCamera;
++                this.mc.gameSettings.smoothCamEnabled = Config.zoomSmoothCamera;
+                 this.mouseFilterXAxis = new MouseFilter();
+                 this.mouseFilterYAxis = new MouseFilter();
+                 this.mc.renderGlobal.displayListEntitiesDirty = true;
+@@ -654,7 +657,21 @@ public class EntityRenderer implements IResourceManagerReloadListener {
+      * sets up player's eye (or camera in third person mode)
+      */
+     private void orientCamera(float partialTicks) {
++        JClient.EVENT_BUS.invokeEvent(new OrientCameraEvent.Pre());
+         Entity entity = this.mc.getRenderViewEntity();
++        float plrYaw = entity.rotationYaw;
++        float plrPitch = entity.rotationPitch;
++        float prevRotationYaw = entity.prevRotationYaw;
++        float prevRotationPitch = entity.prevRotationPitch;
++
++        FreeLookModule module = ModuleRegistry.getModuleByClass(FreeLookModule.class);
++        if (module != null && module.isEnabled()) {
++            plrYaw = module.getRotationYaw();
++            plrPitch = module.getRotationPitch();
++            prevRotationYaw = module.getPrevRotationYaw();
++            prevRotationPitch = module.getPrevRotationPitch();
++        }
++
+         float f = entity.getEyeHeight();
+         double d0 = entity.prevPosX + (entity.posX - entity.prevPosX) * (double) partialTicks;
+         double d1 = entity.prevPosY + (entity.posY - entity.prevPosY) * (double) partialTicks + (double) f;
+@@ -676,25 +693,25 @@ public class EntityRenderer implements IResourceManagerReloadListener {
+                     GlStateManager.rotate((float) (j * 90), 0.0F, 1.0F, 0.0F);
+                 }
+ 
+-                GlStateManager.rotate(entity.prevRotationYaw + (entity.rotationYaw - entity.prevRotationYaw) * partialTicks + 180.0F, 0.0F, -1.0F, 0.0F);
+-                GlStateManager.rotate(entity.prevRotationPitch + (entity.rotationPitch - entity.prevRotationPitch) * partialTicks, -1.0F, 0.0F, 0.0F);
++                GlStateManager.rotate(prevRotationYaw + (plrYaw - prevRotationYaw) * partialTicks + 180.0F, 0.0F, -1.0F, 0.0F);
++                GlStateManager.rotate(prevRotationPitch + (plrPitch - prevRotationPitch) * partialTicks, -1.0F, 0.0F, 0.0F);
+             }
+-        } else if (this.mc.gameSettings.showDebugInfo > 0) {
+-            double d3 = (double) (this.thirdPersonDistanceTemp + (this.thirdPersonDistance - this.thirdPersonDistanceTemp) * partialTicks);
++        } else if (this.mc.gameSettings.perspective > 0) {
++            double d3 = this.thirdPersonDistanceTemp + (this.thirdPersonDistance - this.thirdPersonDistanceTemp) * partialTicks;
+ 
+             if (this.mc.gameSettings.fovSetting) {
+                 GlStateManager.translate(0.0F, 0.0F, (float) (-d3));
+             } else {
+-                float f1 = entity.rotationYaw;
+-                float f2 = entity.rotationPitch;
++                float yaw = plrYaw;
++                float pitch = plrPitch;
+ 
+-                if (this.mc.gameSettings.showDebugInfo == 2) {
+-                    f2 += 180.0F;
++                if (this.mc.gameSettings.perspective == 2) {
++                    pitch += 180.0F;
+                 }
+ 
+-                double d4 = (double) (-MathHelper.sin(f1 / 180.0F * (float) Math.PI) * MathHelper.cos(f2 / 180.0F * (float) Math.PI)) * d3;
+-                double d5 = (double) (MathHelper.cos(f1 / 180.0F * (float) Math.PI) * MathHelper.cos(f2 / 180.0F * (float) Math.PI)) * d3;
+-                double d6 = (double) (-MathHelper.sin(f2 / 180.0F * (float) Math.PI)) * d3;
++                double d4 = (double) (-MathHelper.sin(yaw / 180.0F * (float) Math.PI) * MathHelper.cos(pitch / 180.0F * (float) Math.PI)) * d3;
++                double d5 = (double) (MathHelper.cos(yaw / 180.0F * (float) Math.PI) * MathHelper.cos(pitch / 180.0F * (float) Math.PI)) * d3;
++                double d6 = (double) (-MathHelper.sin(pitch / 180.0F * (float) Math.PI)) * d3;
+ 
+                 for (int i = 0; i < 8; ++i) {
+                     float f3 = (float) ((i & 1) * 2 - 1);
+@@ -714,15 +731,16 @@ public class EntityRenderer implements IResourceManagerReloadListener {
+                     }
+                 }
+ 
+-                if (this.mc.gameSettings.showDebugInfo == 2) {
++                if (this.mc.gameSettings.perspective == 2) {
+                     GlStateManager.rotate(180.0F, 0.0F, 1.0F, 0.0F);
+                 }
+ 
+-                GlStateManager.rotate(entity.rotationPitch - f2, 1.0F, 0.0F, 0.0F);
+-                GlStateManager.rotate(entity.rotationYaw - f1, 0.0F, 1.0F, 0.0F);
++                GlStateManager.rotate(plrPitch - pitch, 1.0F, 0.0F, 0.0F);
++                GlStateManager.rotate(plrYaw - yaw, 0.0F, 1.0F, 0.0F);
+                 GlStateManager.translate(0.0F, 0.0F, (float) (-d3));
+-                GlStateManager.rotate(f1 - entity.rotationYaw, 0.0F, 1.0F, 0.0F);
+-                GlStateManager.rotate(f2 - entity.rotationPitch, 1.0F, 0.0F, 0.0F);
++                GlStateManager.rotate(yaw - plrYaw, 0.0F, 1.0F, 0.0F);
++                GlStateManager.rotate(pitch - plrPitch, 1.0F, 0.0F, 0.0F);
++
+             }
+         } else {
+             GlStateManager.translate(0.0F, 0.0F, -0.1F);
+@@ -750,13 +768,13 @@ public class EntityRenderer implements IResourceManagerReloadListener {
+                 GlStateManager.rotate(f6, 0.0F, 1.0F, 0.0F);
+             }
+         } else if (!this.mc.gameSettings.fovSetting) {
+-            GlStateManager.rotate(entity.prevRotationPitch + (entity.rotationPitch - entity.prevRotationPitch) * partialTicks, 1.0F, 0.0F, 0.0F);
++            GlStateManager.rotate(prevRotationPitch + (plrPitch - prevRotationPitch) * partialTicks, 1.0F, 0.0F, 0.0F);
+ 
+             if (entity instanceof EntityAnimal) {
+                 EntityAnimal entityanimal = (EntityAnimal) entity;
+                 GlStateManager.rotate(entityanimal.prevRotationYawHead + (entityanimal.rotationYawHead - entityanimal.prevRotationYawHead) * partialTicks + 180.0F, 0.0F, 1.0F, 0.0F);
+             } else {
+-                GlStateManager.rotate(entity.prevRotationYaw + (entity.rotationYaw - entity.prevRotationYaw) * partialTicks + 180.0F, 0.0F, 1.0F, 0.0F);
++                GlStateManager.rotate(prevRotationYaw + (plrYaw - prevRotationYaw) * partialTicks + 180.0F, 0.0F, 1.0F, 0.0F);
+             }
+         }
+ 
+@@ -765,6 +783,8 @@ public class EntityRenderer implements IResourceManagerReloadListener {
+         d1 = entity.prevPosY + (entity.posY - entity.prevPosY) * (double) partialTicks + (double) f;
+         d2 = entity.prevPosZ + (entity.posZ - entity.prevPosZ) * (double) partialTicks;
+         this.cloudFog = this.mc.renderGlobal.hasCloudFog(d0, d1, d2, partialTicks);
++
++        JClient.EVENT_BUS.invokeEvent(new OrientCameraEvent.Post());
+     }
+ 
+     /**
+@@ -898,7 +918,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
+                 flag = this.mc.getRenderViewEntity() instanceof EntityLivingBase && ((EntityLivingBase) this.mc.getRenderViewEntity()).isPlayerSleeping();
+                 boolean flag1 = !ReflectorForge.renderFirstPersonHand(this.mc.renderGlobal, p_renderHand_1_, p_renderHand_2_);
+ 
+-                if (flag1 && this.mc.gameSettings.showDebugInfo == 0 && !flag && !this.mc.gameSettings.thirdPersonView && !this.mc.playerController.isSpectator()) {
++                if (flag1 && this.mc.gameSettings.perspective == 0 && !flag && !this.mc.gameSettings.hideGUI && !this.mc.playerController.isSpectator()) {
+                     this.enableLightmap();
+ 
+                     if (Config.isShaders()) {
+@@ -919,7 +939,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
+ 
+             this.disableLightmap();
+ 
+-            if (this.mc.gameSettings.showDebugInfo == 0 && !flag) {
++            if (this.mc.gameSettings.perspective == 0 && !flag) {
+                 this.itemRenderer.renderOverlays(p_renderHand_1_);
+                 this.hurtCameraEffect(p_renderHand_1_);
+             }
+@@ -1139,18 +1159,23 @@ public class EntityRenderer implements IResourceManagerReloadListener {
+                 i = -1;
+             }
+ 
+-            if (this.mc.gameSettings.debugCamEnable) {
+-                this.smoothCamYaw += f2;
+-                this.smoothCamPitch += f3;
+-                float f4 = partialTicks - this.smoothCamPartialTicks;
+-                this.smoothCamPartialTicks = partialTicks;
+-                f2 = this.smoothCamFilterX * f4;
+-                f3 = this.smoothCamFilterY * f4;
+-                this.mc.thePlayer.setAngles(f2, f3 * (float) i);
++            FreeLookModule module = ModuleRegistry.getModuleByClass(FreeLookModule.class);
++            if (module == null || !module.isEnabled() || !module.isHeadLocked()) {
++                if (this.mc.gameSettings.smoothCamEnabled) {
++                    this.smoothCamYaw += f2;
++                    this.smoothCamPitch += f3;
++                    float f4 = partialTicks - this.smoothCamPartialTicks;
++                    this.smoothCamPartialTicks = partialTicks;
++                    f2 = this.smoothCamFilterX * f4;
++                    f3 = this.smoothCamFilterY * f4;
++                    this.mc.thePlayer.setAngles(f2, f3 * (float) i);
++                } else {
++                    this.smoothCamYaw = 0.0F;
++                    this.smoothCamPitch = 0.0F;
++                    this.mc.thePlayer.setAngles(f2, f3 * (float) i);
++                }
+             } else {
+-                this.smoothCamYaw = 0.0F;
+-                this.smoothCamPitch = 0.0F;
+-                this.mc.thePlayer.setAngles(f2, f3 * (float) i);
++                module.setAngles(f2, f3 * (float) i);
+             }
+         }
+ 
+@@ -1190,7 +1215,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
+                 this.renderEndNanoTime = System.nanoTime();
+                 this.mc.mcProfiler.endStartSection("gui");
+ 
+-                if (!this.mc.gameSettings.thirdPersonView || this.mc.currentScreen != null) {
++                if (!this.mc.gameSettings.hideGUI || this.mc.currentScreen != null) {
+                     GlStateManager.alphaFunc(516, 0.1F);
+                     this.mc.ingameGUI.renderGameOverlay(partialTicks);
+                     if (this.mc.gameSettings.ofShowFps && !this.mc.gameSettings.showDebugProfilerChart) {
+@@ -1269,7 +1294,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
+             return false;
+         } else {
+             Entity entity = this.mc.getRenderViewEntity();
+-            boolean flag = entity instanceof EntityPlayer && !this.mc.gameSettings.thirdPersonView;
++            boolean flag = entity instanceof EntityPlayer && !this.mc.gameSettings.hideGUI;
+ 
+             if (flag && !((EntityPlayer) entity).capabilities.allowEdit) {
+                 ItemStack itemstack = ((EntityPlayer) entity).getCurrentEquippedItem();
+@@ -1292,7 +1317,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
+     }
+ 
+     private void renderWorldDirections(float partialTicks) {
+-        if (this.mc.gameSettings.showDebugProfilerChart && !this.mc.gameSettings.thirdPersonView && !this.mc.thePlayer.hasReducedDebug() && !this.mc.gameSettings.reducedDebugInfo) {
++        if (this.mc.gameSettings.showDebugProfilerChart && !this.mc.gameSettings.hideGUI && !this.mc.thePlayer.hasReducedDebug() && !this.mc.gameSettings.reducedDebugInfo) {
+             Entity entity = this.mc.getRenderViewEntity();
+             GlStateManager.enableBlend();
+             GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
+@@ -1380,7 +1405,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
+             Shaders.setCamera(partialTicks);
+         }
+ 
+-        ActiveRenderInfo.updateRenderInfo(this.mc.thePlayer, this.mc.gameSettings.showDebugInfo == 2);
++        ActiveRenderInfo.updateRenderInfo(this.mc.thePlayer, this.mc.gameSettings.perspective == 2);
+         this.mc.mcProfiler.endStartSection("frustum");
+         ClippingHelper clippinghelper = ClippingHelperImpl.getInstance();
+         this.mc.mcProfiler.endStartSection("culling");
+@@ -1539,7 +1564,7 @@ public class EntityRenderer implements IResourceManagerReloadListener {
+             GlStateManager.disableAlpha();
+             this.mc.mcProfiler.endStartSection("outline");
+ 
+-            if ((!Reflector.ForgeHooksClient_onDrawBlockHighlight.exists() || !Reflector.callBoolean(Reflector.ForgeHooksClient_onDrawBlockHighlight, new Object[]{renderglobal, entityplayer1, this.mc.objectMouseOver, Integer.valueOf(0), entityplayer1.getHeldItem(), Float.valueOf(partialTicks)})) && !this.mc.gameSettings.thirdPersonView) {
++            if ((!Reflector.ForgeHooksClient_onDrawBlockHighlight.exists() || !Reflector.callBoolean(Reflector.ForgeHooksClient_onDrawBlockHighlight, renderglobal, entityplayer1, this.mc.objectMouseOver, Integer.valueOf(0), entityplayer1.getHeldItem(), Float.valueOf(partialTicks))) && !this.mc.gameSettings.hideGUI) {
+                 renderglobal.drawSelectionBox(entityplayer1, this.mc.objectMouseOver, 0, partialTicks);
+             }
+             GlStateManager.enableAlpha();
+@@ -1627,12 +1652,15 @@ public class EntityRenderer implements IResourceManagerReloadListener {
+             Shaders.beginWater();
+         }
+ 
+-        renderglobal.renderBlockLayer(EnumWorldBlockLayer.TRANSLUCENT, (double) partialTicks, pass, entity);
++        renderglobal.renderBlockLayer(EnumWorldBlockLayer.TRANSLUCENT, partialTicks, pass, entity);
++
++        JClient.EVENT_BUS.invokeEvent(new RenderEvent.PostPost(partialTicks));
+ 
+         if (flag) {
+             Shaders.endWater();
+         }
+ 
++
+         if (Reflector.ForgeHooksClient_setRenderPass.exists() && !this.debugView) {
+             RenderHelper.enableStandardItemLighting();
+             this.mc.mcProfiler.endStartSection("entities");
+@@ -1684,7 +1712,6 @@ public class EntityRenderer implements IResourceManagerReloadListener {
+             Shaders.endRender();
+         }
+ 
+-
+     }
+ 
+     private void renderCloudsCheck(RenderGlobal renderGlobalIn, float partialTicks, int pass) {
+-- 
+2.34.1
+

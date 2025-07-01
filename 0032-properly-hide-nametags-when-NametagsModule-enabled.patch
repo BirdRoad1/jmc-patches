@@ -1,0 +1,36 @@
+From 1f567ed1ca9a1149f8638ee11347003dd68677eb Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sun, 29 Jun 2025 03:01:30 -0400
+Subject: [PATCH 32/60] properly hide nametags when NametagsModule enabled
+
+---
+ .../client/renderer/entity/RendererLivingEntity.java        | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/main/java/net/minecraft/client/renderer/entity/RendererLivingEntity.java b/src/main/java/net/minecraft/client/renderer/entity/RendererLivingEntity.java
+index bdfb26f..361056f 100644
+--- a/src/main/java/net/minecraft/client/renderer/entity/RendererLivingEntity.java
++++ b/src/main/java/net/minecraft/client/renderer/entity/RendererLivingEntity.java
+@@ -695,6 +695,10 @@ public abstract class RendererLivingEntity<T extends EntityLivingBase> extends R
+     {
+         EntityPlayerSP entityplayersp = Minecraft.getMinecraft().thePlayer;
+ 
++        if (entity instanceof EntityPlayer && ModuleRegistry.getModuleByClass(NametagsModule.class).isEnabled()) {
++            return false;
++        }
++
+         if (entity instanceof EntityPlayer && entity != entityplayersp)
+         {
+             Team team = entity.getTeam();
+@@ -724,7 +728,7 @@ public abstract class RendererLivingEntity<T extends EntityLivingBase> extends R
+             }
+         }
+ 
+-        return Minecraft.isGuiEnabled() && entity != this.renderManager.getLivingPlayer() && !entity.isInvisibleToPlayer(entityplayersp) && entity.riddenByEntity == null && !(entity instanceof EntityPlayer && ModuleRegistry.getModuleByClass(NametagsModule.class).isEnabled());
++        return Minecraft.isGuiEnabled() && entity != this.renderManager.getLivingPlayer() && !entity.isInvisibleToPlayer(entityplayersp) && entity.riddenByEntity == null;
+     }
+ 
+     public void setRenderOutlines(boolean renderOutlinesIn)
+-- 
+2.34.1
+

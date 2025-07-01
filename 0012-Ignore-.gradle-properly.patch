@@ -1,0 +1,25 @@
+From 6f022fe421b3f765361a8601380dc1afdd570d03 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Tue, 24 Jun 2025 10:02:01 -0400
+Subject: [PATCH 12/60] Ignore .gradle properly
+
+---
+ .gitignore | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/.gitignore b/.gitignore
+index acb68f1..0575e34 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -27,6 +27,5 @@ libraries/
+ natives/
+ jars/
+ 
+-.gradle
++.gradle/
+ build/
+-out/
+\ No newline at end of file
+-- 
+2.34.1
+

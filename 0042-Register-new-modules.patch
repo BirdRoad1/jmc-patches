@@ -1,0 +1,35 @@
+From b5fb264dd3c94bda69bf679596a0888d517681da Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sun, 29 Jun 2025 03:06:58 -0400
+Subject: [PATCH 42/60] Register new modules
+
+---
+ src/main/java/com/jlmsz/module/ModuleRegistry.java | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/main/java/com/jlmsz/module/ModuleRegistry.java b/src/main/java/com/jlmsz/module/ModuleRegistry.java
+index 4ac2de3..117c493 100644
+--- a/src/main/java/com/jlmsz/module/ModuleRegistry.java
++++ b/src/main/java/com/jlmsz/module/ModuleRegistry.java
+@@ -1,6 +1,7 @@
+ package com.jlmsz.module;
+ 
+ import com.jlmsz.module.impl.*;
++import com.jlmsz.util.PacketLogger;
+ 
+ import java.util.ArrayList;
+ import java.util.HashMap;
+@@ -20,6 +21,10 @@ public class ModuleRegistry {
+         registerModule(new NametagsModule());
+         registerModule(new ObbyAlarmModule());
+         registerModule(new BedAlarmModule());
++        registerModule(new AutoGGModule());
++        registerModule(new PacketLogger());
++        registerModule(new CPSModule());
++        registerModule(new KeystrokesModule());
+     }
+ 
+     private static void registerModule(Module module) {
+-- 
+2.34.1
+

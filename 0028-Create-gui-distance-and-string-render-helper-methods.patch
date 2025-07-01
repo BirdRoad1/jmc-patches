@@ -1,0 +1,76 @@
+From 6b8f39f8f3f1dfca9e9f9bb8c17b5d1683fb0494 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sun, 29 Jun 2025 03:00:08 -0400
+Subject: [PATCH 28/60] Create gui distance and string render helper methods
+
+---
+ .../jlmsz/gui/component/SliderComponent.java  |  2 +-
+ src/main/java/com/jlmsz/util/GuiUtil.java     | 30 +++++++++++++++++--
+ 2 files changed, 28 insertions(+), 4 deletions(-)
+
+diff --git a/src/main/java/com/jlmsz/gui/component/SliderComponent.java b/src/main/java/com/jlmsz/gui/component/SliderComponent.java
+index acfac28..8820f3c 100644
+--- a/src/main/java/com/jlmsz/gui/component/SliderComponent.java
++++ b/src/main/java/com/jlmsz/gui/component/SliderComponent.java
+@@ -83,7 +83,7 @@ public class SliderComponent extends Gui implements IComponent {
+         int radius = 10;
+ 
+         // Euclidean distance
+-        return ((handleX - mouseX) * (handleX - mouseX) + (handleY - mouseY) * (handleY - mouseY) <= radius * radius);
++        return GuiUtil.distanceSq(handleX, handleY, mouseX, mouseY) <= radius * radius;
+     }
+ 
+     @Override
+diff --git a/src/main/java/com/jlmsz/util/GuiUtil.java b/src/main/java/com/jlmsz/util/GuiUtil.java
+index a951ad1..822bf29 100644
+--- a/src/main/java/com/jlmsz/util/GuiUtil.java
++++ b/src/main/java/com/jlmsz/util/GuiUtil.java
+@@ -60,12 +60,28 @@ public class GuiUtil {
+ 
+     }
+ 
+-    public static void drawUnscaledCenteredString(FontRenderer fontRendererIn, String text, int x, int y, int color, int scale) {
++    public static void drawUnscaledSplitString(FontRenderer fontRendererIn, String text, int x, int y, int wrapWidth, int color, float scale) {
+         GlStateManager.pushMatrix();
+ 
+         GlStateManager.scale(scale, scale, scale);
+-        int width = fontRendererIn.getStringWidth(text) * scale;
+-        int height = fontRendererIn.FONT_HEIGHT * scale;
++//
++        int scaledX = (int) (x / scale);
++        int scaledY = (int) (y / scale);
++        int scaledWidth = (int) (wrapWidth / scale);
++//
++        fontRendererIn.drawSplitString(text, scaledX, scaledY, scaledWidth, 0xFFFFFFFF);
++//
++        GlStateManager.popMatrix();
++
++    }
++
++
++    public static void drawUnscaledCenteredString(FontRenderer fontRendererIn, String text, int x, int y, int color, float scale) {
++        GlStateManager.pushMatrix();
++
++        GlStateManager.scale(scale, scale, scale);
++        float width = fontRendererIn.getStringWidth(text) * scale;
++        float height = fontRendererIn.FONT_HEIGHT * scale;
+ 
+         float scaledX = ((float) x - width / 2f) / scale;
+         float scaledY = ((float) y - height / 2f) / scale;
+@@ -174,4 +190,12 @@ public class GuiUtil {
+         GlStateManager.loadIdentity();
+         GlStateManager.translate(0.0F, 0.0F, -2000.0F);
+     }
++
++    public static double distance(double x1, double y1, double x2, double y2) {
++        return Math.sqrt(distanceSq(x1,y1,x2,y2));
++    }
++
++    public static double distanceSq(double x1, double y1, double x2, double y2) {
++        return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
++    }
+ }
+\ No newline at end of file
+-- 
+2.34.1
+

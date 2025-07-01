@@ -1,0 +1,59 @@
+From 8c5268819af99155d11988f322a05a9a79a9aae7 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Mon, 30 Jun 2025 13:06:28 -0400
+Subject: [PATCH 52/60] Create ESP Module
+
+---
+ .../java/com/jlmsz/module/impl/ESPModule.java | 40 +++++++++++++++++++
+ 1 file changed, 40 insertions(+)
+ create mode 100644 src/main/java/com/jlmsz/module/impl/ESPModule.java
+
+diff --git a/src/main/java/com/jlmsz/module/impl/ESPModule.java b/src/main/java/com/jlmsz/module/impl/ESPModule.java
+new file mode 100644
+index 0000000..3c0f248
+--- /dev/null
++++ b/src/main/java/com/jlmsz/module/impl/ESPModule.java
+@@ -0,0 +1,40 @@
++package com.jlmsz.module.impl;
++
++import com.jlmsz.JClient;
++import com.jlmsz.event.EventHandler;
++import com.jlmsz.event.impl.RenderEntityEvent;
++import com.jlmsz.module.Module;
++import com.jlmsz.module.ModuleCategory;
++import net.minecraft.client.entity.EntityOtherPlayerMP;
++import net.minecraft.entity.Entity;
++import org.lwjgl.opengl.GL11;
++
++public class ESPModule extends Module {
++
++    public ESPModule() {
++        super("ESP", "See players through blocks", ModuleCategory.RENDER);
++        JClient.EVENT_BUS.registerListener(this);
++    }
++
++    @EventHandler
++    public void onRenderEntity(RenderEntityEvent.Pre event) {
++        if (mc.theWorld == null || !this.isEnabled()) return;
++        Entity entity = event.getEntity();
++        if (!(entity instanceof EntityOtherPlayerMP) || !mc.theWorld.loadedEntityList.contains(event.getEntity()))
++            return;
++        GL11.glDepthRange(0.0, 0.01);
++
++    }
++
++    @EventHandler
++    public void onRenderEntity(RenderEntityEvent.Post event) {
++        if (mc.theWorld == null || !this.isEnabled()) return;
++        Entity entity = event.getEntity();
++        if (!(entity instanceof EntityOtherPlayerMP) || !mc.theWorld.loadedEntityList.contains(event.getEntity()))
++            return;
++
++        GL11.glDepthRange(0.0, 1.0);
++
++    }
++
++}
+-- 
+2.34.1
+

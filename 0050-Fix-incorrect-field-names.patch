@@ -1,0 +1,67 @@
+From f7e072849f9a79270e9b926a71fdd5b0eaba9b6c Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Mon, 30 Jun 2025 13:05:06 -0400
+Subject: [PATCH 50/60] Fix incorrect field names
+
+---
+ .../net/minecraft/client/settings/GameSettings.java  | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/src/main/java/net/minecraft/client/settings/GameSettings.java b/src/main/java/net/minecraft/client/settings/GameSettings.java
+index 04ed02a..08dacd3 100644
+--- a/src/main/java/net/minecraft/client/settings/GameSettings.java
++++ b/src/main/java/net/minecraft/client/settings/GameSettings.java
+@@ -139,7 +139,7 @@ public class GameSettings {
+     private Map<SoundCategory, Float> optionsFile = Maps.newEnumMap(SoundCategory.class);
+     public boolean useNativeTransport = true;
+     public boolean entityShadows = true;
+-    public KeyBinding keyBindForward2 = new KeyBinding("key.forward", 17, "key.categories.movement");
++    public KeyBinding keyBindForward = new KeyBinding("key.forward", 17, "key.categories.movement");
+     public KeyBinding keyBindLeft = new KeyBinding("key.left", 30, "key.categories.movement");
+     public KeyBinding keyBindBack = new KeyBinding("key.back", 31, "key.categories.movement");
+     public KeyBinding keyBindRight = new KeyBinding("key.right", 32, "key.categories.movement");
+@@ -165,12 +165,12 @@ public class GameSettings {
+     protected Minecraft mc;
+     private File bc;
+     public EnumDifficulty difficulty;
+-    public boolean thirdPersonView;
++    public boolean hideGUI;
+ 
+     /**
+      * true if debug info should be displayed instead of version
+      */
+-    public int showDebugInfo;
++    public int perspective;
+     public boolean showDebugProfilerChart;
+     public boolean showLagometer;
+ 
+@@ -183,7 +183,7 @@ public class GameSettings {
+      * Smooth Camera Toggle
+      */
+     public String lastServer1;
+-    public boolean debugCamEnable;
++    public boolean smoothCamEnabled;
+     public boolean fovSetting;
+     public float fov;
+     public float gamma;
+@@ -283,7 +283,7 @@ public class GameSettings {
+     private File optionsFileOF;
+ 
+     public GameSettings(Minecraft mcIn, File optionsFileIn) {
+-        this.moreKeyBindings = (KeyBinding[]) ((KeyBinding[]) ArrayUtils.addAll(new KeyBinding[]{this.keyBindAttack, this.keyBindUseItem, this.keyBindForward2, this.keyBindLeft, this.keyBindBack, this.keyBindRight, this.keyBindJump, this.keyBindSneak, this.keyBindSprint, this.keyBindDrop, this.keyBindInventory, this.keyBindChat, this.keyBindPlayerList, this.keyBindPickBlock, this.keyBindCommand, this.keyBindScreenshot, this.keyBindPerspective, this.keyBindSmoothCamera, this.keyBindFullscreen, this.keyBindSpectatorOutlines}, this.keyBindings));
++        this.moreKeyBindings = ArrayUtils.addAll(new KeyBinding[]{this.keyBindAttack, this.keyBindUseItem, this.keyBindForward, this.keyBindLeft, this.keyBindBack, this.keyBindRight, this.keyBindJump, this.keyBindSneak, this.keyBindSprint, this.keyBindDrop, this.keyBindInventory, this.keyBindChat, this.keyBindPlayerList, this.keyBindPickBlock, this.keyBindCommand, this.keyBindScreenshot, this.keyBindPerspective, this.keyBindSmoothCamera, this.keyBindFullscreen, this.keyBindSpectatorOutlines}, this.keyBindings);
+         this.difficulty = EnumDifficulty.NORMAL;
+         this.lastServer1 = "";
+         this.fov = 70.0F;
+@@ -319,7 +319,7 @@ public class GameSettings {
+     }
+ 
+     public GameSettings() {
+-        this.moreKeyBindings = (KeyBinding[]) ((KeyBinding[]) ArrayUtils.addAll(new KeyBinding[]{this.keyBindAttack, this.keyBindUseItem, this.keyBindForward2, this.keyBindLeft, this.keyBindBack, this.keyBindRight, this.keyBindJump, this.keyBindSneak, this.keyBindSprint, this.keyBindDrop, this.keyBindInventory, this.keyBindChat, this.keyBindPlayerList, this.keyBindPickBlock, this.keyBindCommand, this.keyBindScreenshot, this.keyBindPerspective, this.keyBindSmoothCamera, this.keyBindFullscreen, this.keyBindSpectatorOutlines}, this.keyBindings));
++        this.moreKeyBindings = ArrayUtils.addAll(new KeyBinding[]{this.keyBindAttack, this.keyBindUseItem, this.keyBindForward, this.keyBindLeft, this.keyBindBack, this.keyBindRight, this.keyBindJump, this.keyBindSneak, this.keyBindSprint, this.keyBindDrop, this.keyBindInventory, this.keyBindChat, this.keyBindPlayerList, this.keyBindPickBlock, this.keyBindCommand, this.keyBindScreenshot, this.keyBindPerspective, this.keyBindSmoothCamera, this.keyBindFullscreen, this.keyBindSpectatorOutlines}, this.keyBindings);
+         this.difficulty = EnumDifficulty.NORMAL;
+         this.lastServer1 = "";
+         this.fov = 70.0F;
+-- 
+2.34.1
+

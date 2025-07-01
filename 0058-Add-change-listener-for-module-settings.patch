@@ -1,0 +1,63 @@
+From c3211f3296ee0a3b671bd3b59f5344681c7b0f3e Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Mon, 30 Jun 2025 13:09:07 -0400
+Subject: [PATCH 58/60] Add change listener for module settings
+
+---
+ .../jlmsz/module/config/ModuleSetting.java    | 26 +++++++++++++++++++
+ 1 file changed, 26 insertions(+)
+
+diff --git a/src/main/java/com/jlmsz/module/config/ModuleSetting.java b/src/main/java/com/jlmsz/module/config/ModuleSetting.java
+index 20721ba..dc0dd5b 100644
+--- a/src/main/java/com/jlmsz/module/config/ModuleSetting.java
++++ b/src/main/java/com/jlmsz/module/config/ModuleSetting.java
+@@ -1,8 +1,12 @@
+ package com.jlmsz.module.config;
+ 
++import java.util.ArrayList;
++import java.util.List;
++
+ public abstract class ModuleSetting<T> {
+ 
+     protected T value;
++    private final List<IChangeListener<T>> changeListeners = new ArrayList<>();
+ 
+     public ModuleSetting(T value) {
+         this.value = value;
+@@ -12,6 +16,16 @@ public abstract class ModuleSetting<T> {
+         if (!this.isValidValue(value)) {
+             return;
+         }
++
++        try {
++            for (IChangeListener<T> listener : changeListeners) {
++                listener.onChange(value);
++            }
++        } catch (Exception ex) {
++            System.out.println("Exception in value change listener:");
++            ex.printStackTrace();
++        }
++
+         this.value = value;
+     }
+ 
+@@ -22,4 +36,16 @@ public abstract class ModuleSetting<T> {
+     public boolean isValidValue(T value) {
+         return true;
+     }
++
++    public void addChangeListener(IChangeListener<T> listener) {
++        changeListeners.add(listener);
++    }
++
++    public void removeChangeListener(IChangeListener<T> listener) {
++        changeListeners.remove(listener);
++    }
++
++    public interface IChangeListener<T> {
++        void onChange(T value);
++    }
+ }
+-- 
+2.34.1
+

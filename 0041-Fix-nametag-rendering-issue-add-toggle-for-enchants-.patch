@@ -1,0 +1,271 @@
+From d32a9b8ad9dc95af81bb6c0a5b0a6d43d74ea961 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sun, 29 Jun 2025 03:06:49 -0400
+Subject: [PATCH 41/60] Fix nametag rendering issue, add toggle for enchants,
+ add antibot support
+
+---
+ .../com/jlmsz/module/impl/NametagsModule.java | 138 +++++++++++-------
+ src/main/java/com/jlmsz/util/AntiBot.java     |  37 +++++
+ 2 files changed, 122 insertions(+), 53 deletions(-)
+ create mode 100644 src/main/java/com/jlmsz/util/AntiBot.java
+
+diff --git a/src/main/java/com/jlmsz/module/impl/NametagsModule.java b/src/main/java/com/jlmsz/module/impl/NametagsModule.java
+index 1af8364..7e76c4a 100644
+--- a/src/main/java/com/jlmsz/module/impl/NametagsModule.java
++++ b/src/main/java/com/jlmsz/module/impl/NametagsModule.java
+@@ -5,6 +5,8 @@ import com.jlmsz.event.EventHandler;
+ import com.jlmsz.event.impl.RenderEvent;
+ import com.jlmsz.module.Module;
+ import com.jlmsz.module.ModuleCategory;
++import com.jlmsz.module.config.BooleanModuleSetting;
++import com.jlmsz.util.AntiBot;
+ import com.jlmsz.util.GuiUtil;
+ import com.jlmsz.util.Util;
+ import net.minecraft.client.entity.EntityOtherPlayerMP;
+@@ -14,16 +16,22 @@ import net.minecraft.client.renderer.WorldRenderer;
+ import net.minecraft.client.renderer.texture.TextureMap;
+ import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
+ import net.minecraft.client.resources.model.IBakedModel;
++import net.minecraft.enchantment.Enchantment;
+ import net.minecraft.entity.Entity;
+ import net.minecraft.item.ItemStack;
++import net.minecraft.nbt.NBTTagCompound;
++import net.minecraft.nbt.NBTTagList;
+ import org.lwjgl.opengl.GL11;
+ 
+ import java.util.ArrayList;
+ import java.util.List;
+ 
+ public class NametagsModule extends Module {
++    private final BooleanModuleSetting showEnchants;
++
+     public NametagsModule() {
+         super("Nametags", "Advanced player nametags", ModuleCategory.RENDER);
++        addSetting("Show Enchantments", showEnchants = new BooleanModuleSetting(false));
+         JClient.EVENT_BUS.registerListener(this);
+     }
+ 
+@@ -35,29 +43,42 @@ public class NametagsModule extends Module {
+         GlStateManager.translate(0.25F, 0.25F, 0F);
+ 
+         // Set up rendering state
+-        GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
+-        GlStateManager.enableBlend();
+-        GlStateManager.enableAlpha();
+-        GlStateManager.disableLighting();
+-        GlStateManager.enableTexture2D();
+-        GlStateManager.enableDepth();
+-        GlStateManager.enableRescaleNormal();
+-        GlStateManager.alphaFunc(516, 0.1F);
+-        GlStateManager.blendFunc(770, 771);
+-        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+-        GlStateManager.depthFunc(GL11.GL_ALWAYS);
+ 
+         // Render the item
++
+         for (int i = 0; i < items.size(); i++) {
++            GlStateManager.enableTexture2D();
++            GlStateManager.enableRescaleNormal();
++            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
++            GlStateManager.enableBlend();
++            GlStateManager.enableAlpha();
++            GlStateManager.enableDepth();
++            GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
++            GlStateManager.alphaFunc(516, 0.1F);
++            GlStateManager.blendFunc(770, 771);
++            GlStateManager.disableLighting();
++            GlStateManager.depthFunc(GL11.GL_ALWAYS);
+             ItemStack stack = items.get(i);
+ 
+             IBakedModel model = mc.getRenderItem().getItemModelMesher().getItemModel(stack);
+             mc.getRenderItem().renderItem(stack, model);
+ 
+             if (i < items.size() - 1) {
+-
+                 GlStateManager.translate(-0.5, 0, 0);
+             }
++
++//            NBTTagList ench = stack.getEnchantmentTagList();
++//            if (ench != null) {
++//                NBTTagCompound tag = ench.getCompoundTagAt(0);
++//                int level = tag.getInteger("lvl");
++//                int id = tag.getInteger("id");
++//                Enchantment enchantment = Enchantment.getEnchantmentById(id);
++//                if (enchantment != null) {
++//                    mc.fontRendererObj.drawString(enchantment.getTranslatedName(level), 0, 0, 0xFFFF0000);
++//                    System.out.println(enchantment.getTranslatedName(level));
++//                }
++//            }
++//            System.out.println(ench);
+         }
+ 
+         // Restore GL state
+@@ -66,47 +87,11 @@ public class NametagsModule extends Module {
+         GlStateManager.disableBlend();
+         GlStateManager.disableAlpha();
+         GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
+-
+-        GlStateManager.popMatrix();
+-    }
+-
+-    private void renderItem(ItemStack stack) {
+-        GlStateManager.pushMatrix();
+-
+-        // Prepare model and sprite (sprite is unused here but might be needed for further effects)
+-        IBakedModel model = mc.getRenderItem().getItemModelMesher().getItemModel(stack);
+-
+-        // Apply transformations
+-        GlStateManager.scale(1, 1, 0.01F);
+-        GlStateManager.translate(0.25F, 0.25F, 0F);
+-
+-        // Set up rendering state
+-        GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
+-        GlStateManager.enableBlend();
+-        GlStateManager.enableAlpha();
+         GlStateManager.disableLighting();
+-        GlStateManager.enableTexture2D();
+-        GlStateManager.enableDepth();
+-        GlStateManager.enableRescaleNormal();
+-        GlStateManager.alphaFunc(516, 0.1F);
+-        GlStateManager.blendFunc(770, 771);
+-        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+-        GlStateManager.depthFunc(GL11.GL_ALWAYS);
+-
+-        // Render the item
+-        mc.getRenderItem().renderItem(stack, model);
+-
+-        // Restore GL state
+-        GlStateManager.depthFunc(515);
+-        GlStateManager.disableRescaleNormal();
+-        GlStateManager.disableBlend();
+-        GlStateManager.disableAlpha();
+-        GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
+ 
+         GlStateManager.popMatrix();
+     }
+ 
+-
+     public void drawRect(double left, double top, double right, double bottom) {
+         Tessellator tessellator = Tessellator.getInstance();
+         WorldRenderer worldrenderer = tessellator.getWorldRenderer();
+@@ -143,10 +128,10 @@ public class NametagsModule extends Module {
+         double interpPlayerY = mc.thePlayer.prevPosY + (mc.thePlayer.posY - mc.thePlayer.prevPosY) * partialTicks;
+         double interpPlayerZ = mc.thePlayer.prevPosZ + (mc.thePlayer.posZ - mc.thePlayer.prevPosZ) * partialTicks;
+ 
+-
+         for (Entity entity : mc.theWorld.loadedEntityList) {
+             if (!(entity instanceof EntityOtherPlayerMP)) continue;
+             EntityOtherPlayerMP player = (EntityOtherPlayerMP) entity;
++            if (AntiBot.isBot(mc, player.getUniqueID())) continue;
+ 
+             double interpEntityX = entity.prevPosX + (entity.posX - entity.prevPosX) * partialTicks;
+             double interpEntityY = entity.prevPosY + (entity.posY - entity.prevPosY) * partialTicks;
+@@ -206,10 +191,57 @@ public class NametagsModule extends Module {
+             float stringWidth = mc.fontRendererObj.getStringWidth(name) * 0.02f;
+             float health = player.getHealth();
+             GlStateManager.disableDepth();
+-            GlStateManager.translate(-stringWidth / 2, 0, 0);
+-            GuiUtil.drawUnscaledString(mc.fontRendererObj, name, 0, 0, 0xFFFFFF, 0.02f);
+-            GlStateManager.translate(stringWidth + 0.1, 0, 0);
+-            GuiUtil.drawUnscaledString(mc.fontRendererObj, Integer.toString((int) health), 0, 0, Util.getHealthColor(health), 0.02f);
++
++
++            if (showEnchants.getValue()) {
++                GlStateManager.pushMatrix();
++//            GlStateManager.translate(-.25, -.7f, 0F);
++//            GlStateManager.translate(-0.5F, -.7f, 0F);
++                GlStateManager.translate(-width / 2 - .25, 0, 0);
++                GlStateManager.translate(0.5, -.7, 0);
++
++                for (int i = 0; i < items.size(); i++) {
++                    ItemStack stack = items.get(i);
++//                System.out.println(stack.getEnchantmentTagList());
++
++                    NBTTagList ench = stack.getEnchantmentTagList();
++                    if (ench != null) {
++                        GlStateManager.pushMatrix();
++                        for (int j = 0; j < ench.tagCount(); j++) {
++                            NBTTagCompound tag = ench.getCompoundTagAt(j);
++//                        System.out.println(tag);
++                            int level = tag.getInteger("lvl");
++                            int id = tag.getInteger("id");
++                            if (level != 0) {
++                                Enchantment enchantment = Enchantment.getEnchantmentById(id);
++                                if (enchantment != null) {
++                                    String[] split = enchantment.getTranslatedName(level).split(" ");
++                                    String shortened = split[0].substring(0, 4);
++                                    //enchantment.getTranslatedName(level)
++                                    GuiUtil.drawUnscaledCenteredString(mc.fontRendererObj, shortened + level, 0, 0, 0xFFFFFFFF, 0.015f);
++                                    GlStateManager.translate(0, -0.15, 0);
++                                }
++                            }
++                        }
++                        GlStateManager.popMatrix();
++                    }
++
++                    if (i < items.size() - 1) {
++                        GlStateManager.translate(0.5, 0, 0);
++                    }
++                }
++                GlStateManager.popMatrix();
++            }
++
++
++//            GlStateManager.translate(-stringWidth / 2, 0, 0);
++
++            // Render the item
++
++
++            GuiUtil.drawUnscaledCenteredString(mc.fontRendererObj, name, 0, 0, 0xFFFFFFFF, 0.02f);
++            GlStateManager.translate(stringWidth + 0.01, 0, 0);
++            GuiUtil.drawUnscaledCenteredString(mc.fontRendererObj, Integer.toString((int) health), 0, 0, Util.getHealthColor(health), 0.02f);
+             GlStateManager.popMatrix();
+ 
+             // Restore OpenGL state
+diff --git a/src/main/java/com/jlmsz/util/AntiBot.java b/src/main/java/com/jlmsz/util/AntiBot.java
+new file mode 100644
+index 0000000..767d83f
+--- /dev/null
++++ b/src/main/java/com/jlmsz/util/AntiBot.java
+@@ -0,0 +1,37 @@
++package com.jlmsz.util;
++
++import com.mojang.authlib.GameProfile;
++import net.minecraft.client.Minecraft;
++import net.minecraft.client.network.NetHandlerPlayClient;
++import net.minecraft.client.network.NetworkPlayerInfo;
++
++import java.util.Collection;
++import java.util.UUID;
++
++public class AntiBot {
++
++    /**
++     * Check whether a player is a bot. This method checks if the player is missing in the tab list
++     * to determine player authenticity.
++     *
++     * @param mc         The minecraft instance
++     * @param playerUUID The UUID of the player to check
++     * @return false if the player appears in the tab list or if there is no tab list (e.g. singleplayer), true if the player does not show up in the tab list
++     */
++    public static boolean isBot(Minecraft mc, UUID playerUUID) {
++        if (mc.thePlayer == null || mc.thePlayer.sendQueue == null) return false;
++        if (playerUUID.equals(mc.thePlayer.getUniqueID())) return false;
++
++        NetHandlerPlayClient nethandlerplayclient = mc.thePlayer.sendQueue;
++        Collection<NetworkPlayerInfo> playerInfos = nethandlerplayclient.getPlayerInfoMap();
++        for (NetworkPlayerInfo info : playerInfos) {
++            GameProfile profile = info.getGameProfile();
++            if (profile != null && profile.getId().equals(playerUUID)) {
++                return false;
++            }
++        }
++
++        return true;
++    }
++
++}
+-- 
+2.34.1
+

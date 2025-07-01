@@ -1,0 +1,60 @@
+From 6258e5c517da81e5f7774480bf06849ebdcdbbf2 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sat, 28 Jun 2025 09:46:58 -0400
+Subject: [PATCH 25/60] Commit Intellij IDEA settings
+
+---
+ .idea/compiler.xml | 2 +-
+ .idea/gradle.xml   | 4 ++++
+ .idea/misc.xml     | 5 +++++
+ 3 files changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/.idea/compiler.xml b/.idea/compiler.xml
+index b86273d..38d573b 100644
+--- a/.idea/compiler.xml
++++ b/.idea/compiler.xml
+@@ -1,6 +1,6 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+ <project version="4">
+   <component name="CompilerConfiguration">
+-    <bytecodeTargetLevel target="21" />
++    <bytecodeTargetLevel target="8" />
+   </component>
+ </project>
+\ No newline at end of file
+diff --git a/.idea/gradle.xml b/.idea/gradle.xml
+index f9163b4..936252f 100644
+--- a/.idea/gradle.xml
++++ b/.idea/gradle.xml
+@@ -1,9 +1,13 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+ <project version="4">
++  <component name="GradleMigrationSettings" migrationVersion="1" />
+   <component name="GradleSettings">
+     <option name="linkedExternalProjectsSettings">
+       <GradleProjectSettings>
++        <option name="delegatedBuild" value="false" />
++        <option name="testRunner" value="PLATFORM" />
+         <option name="externalProjectPath" value="$PROJECT_DIR$" />
++        <option name="gradleJvm" value="1.8 (2)" />
+         <option name="modules">
+           <set>
+             <option value="$PROJECT_DIR$" />
+diff --git a/.idea/misc.xml b/.idea/misc.xml
+index 93c908f..7d64bf8 100644
+--- a/.idea/misc.xml
++++ b/.idea/misc.xml
+@@ -1,5 +1,10 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+ <project version="4">
++  <component name="EntryPointsManager">
++    <list size="1">
++      <item index="0" class="java.lang.String" itemvalue="com.jlmsz.event.EventHandler" />
++    </list>
++  </component>
+   <component name="ExternalStorageConfigurationManager" enabled="true" />
+   <component name="FrameworkDetectionExcludesConfiguration">
+     <file type="web" url="file://$PROJECT_DIR$" />
+-- 
+2.34.1
+

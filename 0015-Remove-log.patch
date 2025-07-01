@@ -1,0 +1,24 @@
+From 5b651cf139a0b098888e8eac9277e912b58f3682 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Thu, 26 Jun 2025 06:44:36 -0400
+Subject: [PATCH 15/60] Remove log
+
+---
+ src/main/java/com/jlmsz/module/config/DoubleModuleSetting.java | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/src/main/java/com/jlmsz/module/config/DoubleModuleSetting.java b/src/main/java/com/jlmsz/module/config/DoubleModuleSetting.java
+index 5797a84..b4e9904 100644
+--- a/src/main/java/com/jlmsz/module/config/DoubleModuleSetting.java
++++ b/src/main/java/com/jlmsz/module/config/DoubleModuleSetting.java
+@@ -23,7 +23,6 @@ public class DoubleModuleSetting extends NumericModuleSetting<Double> {
+ 
+     @Override
+     public void setValue(Double value) {
+-        System.out.println(Math.round(value / step) * step);
+         super.setValue(Math.round(value / step) * step);
+     }
+ 
+-- 
+2.34.1
+

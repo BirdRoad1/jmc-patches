@@ -1,0 +1,36 @@
+From d0982a28c71e9aa23538bb56744ea7c3cd9ea4de Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sun, 29 Jun 2025 03:03:16 -0400
+Subject: [PATCH 36/60] fix NPE in singleplayer
+
+---
+ src/main/java/com/jlmsz/util/hypixel/HypixelUtil.java | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/main/java/com/jlmsz/util/hypixel/HypixelUtil.java b/src/main/java/com/jlmsz/util/hypixel/HypixelUtil.java
+index 14faff1..1a95387 100644
+--- a/src/main/java/com/jlmsz/util/hypixel/HypixelUtil.java
++++ b/src/main/java/com/jlmsz/util/hypixel/HypixelUtil.java
+@@ -7,6 +7,7 @@ import com.jlmsz.event.EventHandler;
+ import com.jlmsz.event.impl.ChatReceivedEvent;
+ import com.jlmsz.event.impl.WorldLoadEvent;
+ import net.minecraft.client.Minecraft;
++import net.minecraft.client.multiplayer.ServerData;
+ 
+ import java.util.ArrayList;
+ import java.util.List;
+@@ -26,7 +27,10 @@ public class HypixelUtil {
+ 
+     public boolean isCurrentServerHypixel() {
+         Minecraft mc = Minecraft.getMinecraft();
+-        String ip = mc.getCurrentServerData().serverIP;
++        ServerData currentServer = mc.getCurrentServerData();
++        if (currentServer == null) return false;
++
++        String ip = currentServer.serverIP;
+         return ip != null && (ip.endsWith(".hypixel.net") || ip.equals("hypixel.net"));
+     }
+ 
+-- 
+2.34.1
+

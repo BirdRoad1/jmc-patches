@@ -1,0 +1,25 @@
+From 4a436e57d559de418b6f0f697a5fb0ac3ded0cdc Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sun, 29 Jun 2025 03:02:42 -0400
+Subject: [PATCH 34/60] change crosshair default color to white
+
+---
+ src/main/java/com/jlmsz/module/impl/CrosshairModule.java | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/main/java/com/jlmsz/module/impl/CrosshairModule.java b/src/main/java/com/jlmsz/module/impl/CrosshairModule.java
+index 02f2d26..6b3176f 100644
+--- a/src/main/java/com/jlmsz/module/impl/CrosshairModule.java
++++ b/src/main/java/com/jlmsz/module/impl/CrosshairModule.java
+@@ -44,7 +44,7 @@ public class CrosshairModule extends Module {
+         addSetting("Crosshair Scale", crosshairScale);
+         addSetting("Crosshair Type", crosshair = new CrosshairModuleSetting(0, crosshairOffsets.size()));
+         addSetting("Alpha Effect", alphaEffect = new BooleanModuleSetting(true));
+-        addSetting("Color", color = new ColorModuleSetting(new ARGBColor(1f, 0f, 0f, 0f)));
++        addSetting("Color", color = new ColorModuleSetting(new ARGBColor(1f, 1f, 1f, 1f)));
+     }
+ 
+     @EventHandler
+-- 
+2.34.1
+

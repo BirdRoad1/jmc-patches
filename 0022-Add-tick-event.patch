@@ -1,0 +1,60 @@
+From 964fcdd64d728fb06b1cfa5c401c1002b0b9ec50 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sat, 28 Jun 2025 09:40:57 -0400
+Subject: [PATCH 22/60] Add tick event
+
+---
+ src/main/java/net/minecraft/client/Minecraft.java | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/src/main/java/net/minecraft/client/Minecraft.java b/src/main/java/net/minecraft/client/Minecraft.java
+index 19cec7b..f31e45f 100644
+--- a/src/main/java/net/minecraft/client/Minecraft.java
++++ b/src/main/java/net/minecraft/client/Minecraft.java
+@@ -10,6 +10,7 @@ import com.google.common.util.concurrent.ListenableFutureTask;
+ import com.jlmsz.JClient;
+ import com.jlmsz.event.impl.GameStartedEvent;
+ import com.jlmsz.event.impl.RenderEvent;
++import com.jlmsz.event.impl.TickEvent;
+ import com.jlmsz.gui.settings.SettingsGui;
+ import com.jlmsz.module.ModuleRegistry;
+ import com.jlmsz.module.impl.OldCombatModule;
+@@ -975,7 +976,6 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
+             this.mcProfiler.endStartSection("gameRenderer");
+             JClient.EVENT_BUS.invokeEvent(new RenderEvent.Pre());
+             this.entityRenderer.updateCameraAndRender(this.timer.renderPartialTicks, i);
+-            JClient.EVENT_BUS.invokeEvent(new RenderEvent.Post());
+             this.mcProfiler.endSection();
+         }
+ 
+@@ -1289,7 +1289,8 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
+             // TODO: 1.7 ANIMATIONS
+ //            if (leftClick && this.objectMouseOver != null && this.objectMouseOver.typeOfHit == MovingObjectPosition.MovingObjectType.BLOCK) {
+ //                BlockPos blockpos = this.objectMouseOver.getBlockPos();
+-            thePlayer.fakeSwingItem();
++
++            if (leftClick) thePlayer.fakeSwingItem();
+ 
+ //                if (this.theWorld.getBlockState(blockpos).getBlock().getMaterial() != Material.air && this.playerController.onPlayerDamageBlock(blockpos, this.objectMouseOver.sideHit)) {
+ //                    this.effectRenderer.addBlockHitEffects(blockpos, this.objectMouseOver.sideHit);
+@@ -1344,7 +1345,8 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
+      * Called when user clicked he's mouse right button (place)
+      */
+     private void rightClickMouse() {
+-        if (ModuleRegistry.getModuleByClass(OldCombatModule.class).isEnabled() && this.playerController.getIsHittingBlock()) {
++        OldCombatModule oldCombatModule = ModuleRegistry.getModuleByClass(OldCombatModule.class);
++        if (oldCombatModule != null && oldCombatModule.isEnabled() && oldCombatModule.stopBreaking.getValue() && this.playerController.getIsHittingBlock()) {
+             playerController.resetBlockRemoving();
+         }
+ 
+@@ -1506,6 +1508,7 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
+      * Runs the current tick.
+      */
+     public void runTick() throws IOException {
++        JClient.EVENT_BUS.invokeEvent(new TickEvent());
+         if (this.rightClickDelayTimer > 0) {
+             --this.rightClickDelayTimer;
+         }
+-- 
+2.34.1
+

@@ -1,0 +1,61 @@
+From 8b0395d9ae12f9f6fd108761ab1494a76d46b981 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sun, 29 Jun 2025 03:00:27 -0400
+Subject: [PATCH 29/60] Rename hypixel button to edit gui button, fix GUI
+ re-creation on resize
+
+---
+ .../java/com/jlmsz/gui/settings/SettingsGui.java | 16 +++++++++++-----
+ 1 file changed, 11 insertions(+), 5 deletions(-)
+
+diff --git a/src/main/java/com/jlmsz/gui/settings/SettingsGui.java b/src/main/java/com/jlmsz/gui/settings/SettingsGui.java
+index 8713528..e401984 100644
+--- a/src/main/java/com/jlmsz/gui/settings/SettingsGui.java
++++ b/src/main/java/com/jlmsz/gui/settings/SettingsGui.java
+@@ -15,7 +15,7 @@ import java.io.IOException;
+ public class SettingsGui extends GuiScreen implements IPanelSwitcher {
+ 
+     private SettingsButton modulesBtn;
+-    private SettingsButton hypixelBtn;
++    private SettingsButton editGuiBtn;
+     private SettingsButton miscBtn;
+     private ModuleListView moduleListPanel;
+     private ConfigureModuleView configureModulePanel;
+@@ -37,17 +37,21 @@ public class SettingsGui extends GuiScreen implements IPanelSwitcher {
+         windowX = width / 2 - windowWidth / 2;
+         windowY = height / 2 - windowHeight / 2;
+ 
+-        viewFactory = new ViewFactory(windowX + 300, windowY, windowWidth - 300, windowHeight);
++        viewFactory = new ViewFactory(this, windowX + 300, windowY, windowWidth - 300, windowHeight);
+ 
+         buttonList.add(modulesBtn = new SettingsButton(1, windowX + 5, windowY + 40, 290, 40, "Modules"));
+-        buttonList.add(hypixelBtn = new SettingsButton(1, windowX + 5, windowY + 90, 290, 40, "Hypixel"));
++        buttonList.add(editGuiBtn = new SettingsButton(1, windowX + 5, windowY + 90, 290, 40, "Edit GUI"));
+         buttonList.add(miscBtn = new SettingsButton(1, windowX + 5, windowY + 140, 290, 40, "Misc"));
+ 
+-        if (activeView == null) {
+ 
++        if (activeView != null) {
++            activeView = activeView.recreate(viewFactory);
++            if (activeView == null) {
++                activeView = moduleListPanel = new ModuleListView(this, viewFactory, windowX + 300, windowY, windowWidth - 300, windowHeight);
++            }
++        } else {
+             activeView = moduleListPanel = new ModuleListView(this, viewFactory, windowX + 300, windowY, windowWidth - 300, windowHeight);
+         }
+-
+     }
+ 
+     @Override
+@@ -102,6 +106,8 @@ public class SettingsGui extends GuiScreen implements IPanelSwitcher {
+     protected void actionPerformed(GuiButton button) throws IOException {
+         if (button == modulesBtn) {
+             switchPanel(moduleListPanel);
++        } else if (button == editGuiBtn) {
++            mc.displayGuiScreen(new EditOverlayGui());
+         }
+     }
+ 
+-- 
+2.34.1
+

@@ -1,0 +1,747 @@
+From deb4f763816219be5bec50d1d911c11c56ce8e5b Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sun, 29 Jun 2025 03:05:11 -0400
+Subject: [PATCH 38/60] Add packet logger and custom net handler client
+
+---
+ .../com/jlmsz/util/JNetHandlerPlayClient.java | 602 ++++++++++++++++++
+ .../java/com/jlmsz/util/PacketLogger.java     |  97 +++
+ .../client/network/NetHandlerLoginClient.java |   3 +-
+ 3 files changed, 701 insertions(+), 1 deletion(-)
+ create mode 100644 src/main/java/com/jlmsz/util/JNetHandlerPlayClient.java
+ create mode 100644 src/main/java/com/jlmsz/util/PacketLogger.java
+
+diff --git a/src/main/java/com/jlmsz/util/JNetHandlerPlayClient.java b/src/main/java/com/jlmsz/util/JNetHandlerPlayClient.java
+new file mode 100644
+index 0000000..add8e83
+--- /dev/null
++++ b/src/main/java/com/jlmsz/util/JNetHandlerPlayClient.java
+@@ -0,0 +1,602 @@
++package com.jlmsz.util;
++
++import com.jlmsz.JClient;
++import com.jlmsz.module.ModuleRegistry;
++import com.mojang.authlib.GameProfile;
++import net.minecraft.client.Minecraft;
++import net.minecraft.client.gui.GuiScreen;
++import net.minecraft.client.network.NetHandlerPlayClient;
++import net.minecraft.network.NetworkManager;
++import net.minecraft.network.Packet;
++import net.minecraft.network.play.server.*;
++import net.minecraft.util.IChatComponent;
++
++public class JNetHandlerPlayClient extends NetHandlerPlayClient {
++    public JNetHandlerPlayClient(Minecraft mcIn, GuiScreen p_i46300_2_, NetworkManager p_i46300_3_, GameProfile p_i46300_4_) {
++        super(mcIn, p_i46300_2_, p_i46300_3_, p_i46300_4_);
++    }
++
++    @Override
++    public void handleChat(S02PacketChat packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleChat(packetIn);
++    }
++
++    @Override
++    public void handleJoinGame(S01PacketJoinGame packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleJoinGame(packetIn);
++    }
++
++    @Override
++    public void handleSpawnObject(S0EPacketSpawnObject packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleSpawnObject(packetIn);
++    }
++
++    @Override
++    public void handleSpawnExperienceOrb(S11PacketSpawnExperienceOrb packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleSpawnExperienceOrb(packetIn);
++    }
++
++    @Override
++    public void handleSpawnGlobalEntity(S2CPacketSpawnGlobalEntity packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleSpawnGlobalEntity(packetIn);
++    }
++
++    @Override
++    public void handleSpawnPainting(S10PacketSpawnPainting packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleSpawnPainting(packetIn);
++    }
++
++    @Override
++    public void handleEntityVelocity(S12PacketEntityVelocity packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleEntityVelocity(packetIn);
++    }
++
++    @Override
++    public void handleEntityMetadata(S1CPacketEntityMetadata packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleEntityMetadata(packetIn);
++    }
++
++    @Override
++    public void handleSpawnPlayer(S0CPacketSpawnPlayer packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleSpawnPlayer(packetIn);
++    }
++
++    @Override
++    public void handleEntityTeleport(S18PacketEntityTeleport packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleEntityTeleport(packetIn);
++    }
++
++    @Override
++    public void handleHeldItemChange(S09PacketHeldItemChange packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleHeldItemChange(packetIn);
++    }
++
++    @Override
++    public void handleEntityMovement(S14PacketEntity packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleEntityMovement(packetIn);
++    }
++
++    @Override
++    public void handleEntityHeadLook(S19PacketEntityHeadLook packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleEntityHeadLook(packetIn);
++    }
++
++    @Override
++    public void handleDestroyEntities(S13PacketDestroyEntities packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleDestroyEntities(packetIn);
++    }
++
++    @Override
++    public void handlePlayerPosLook(S08PacketPlayerPosLook packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handlePlayerPosLook(packetIn);
++    }
++
++    @Override
++    public void handleMultiBlockChange(S22PacketMultiBlockChange packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleMultiBlockChange(packetIn);
++    }
++
++    @Override
++    public void handleChunkData(S21PacketChunkData packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleChunkData(packetIn);
++
++    }
++
++    @Override
++    public void handleBlockChange(S23PacketBlockChange packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleBlockChange(packetIn);
++    }
++
++    @Override
++    public void handleDisconnect(S40PacketDisconnect packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleDisconnect(packetIn);
++
++    }
++
++    @Override
++    public void onDisconnect(IChatComponent reason) {
++        super.onDisconnect(reason);
++    }
++
++    @Override
++    public void addToSendQueue(Packet p_147297_1_) {
++//        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++//        if (packetLogger != null) packetLogger.handlePacket(p_147297_1_);
++
++        super.addToSendQueue(p_147297_1_);
++
++    }
++
++    @Override
++    public void handleCollectItem(S0DPacketCollectItem packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleCollectItem(packetIn);
++    }
++
++    @Override
++    public void handleAnimation(S0BPacketAnimation packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleAnimation(packetIn);
++    }
++
++    @Override
++    public void handleUseBed(S0APacketUseBed packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleUseBed(packetIn);
++    }
++
++    @Override
++    public void handleSpawnMob(S0FPacketSpawnMob packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleSpawnMob(packetIn);
++    }
++
++    @Override
++    public void handleTimeUpdate(S03PacketTimeUpdate packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleTimeUpdate(packetIn);
++    }
++
++    @Override
++    public void handleSpawnPosition(S05PacketSpawnPosition packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleSpawnPosition(packetIn);
++    }
++
++    @Override
++    public void handleEntityAttach(S1BPacketEntityAttach packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleEntityAttach(packetIn);
++    }
++
++    @Override
++    public void handleEntityStatus(S19PacketEntityStatus packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleEntityStatus(packetIn);
++    }
++
++    @Override
++    public void handleUpdateHealth(S06PacketUpdateHealth packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleUpdateHealth(packetIn);
++    }
++
++    @Override
++    public void handleSetExperience(S1FPacketSetExperience packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleSetExperience(packetIn);
++    }
++
++    @Override
++    public void handleRespawn(S07PacketRespawn packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleRespawn(packetIn);
++    }
++
++    @Override
++    public void handleExplosion(S27PacketExplosion packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleExplosion(packetIn);
++    }
++
++    @Override
++    public void handleOpenWindow(S2DPacketOpenWindow packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleOpenWindow(packetIn);
++    }
++
++    @Override
++    public void handleSetSlot(S2FPacketSetSlot packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleSetSlot(packetIn);
++    }
++
++    @Override
++    public void handleConfirmTransaction(S32PacketConfirmTransaction packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleConfirmTransaction(packetIn);
++    }
++
++    @Override
++    public void handleWindowItems(S30PacketWindowItems packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleWindowItems(packetIn);
++    }
++
++    @Override
++    public void handleSignEditorOpen(S36PacketSignEditorOpen packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleSignEditorOpen(packetIn);
++    }
++
++    @Override
++    public void handleUpdateSign(S33PacketUpdateSign packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleUpdateSign(packetIn);
++    }
++
++    @Override
++    public void handleUpdateTileEntity(S35PacketUpdateTileEntity packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleUpdateTileEntity(packetIn);
++    }
++
++    @Override
++    public void handleWindowProperty(S31PacketWindowProperty packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleWindowProperty(packetIn);
++    }
++
++    @Override
++    public void handleEntityEquipment(S04PacketEntityEquipment packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleEntityEquipment(packetIn);
++    }
++
++    @Override
++    public void handleCloseWindow(S2EPacketCloseWindow packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleCloseWindow(packetIn);
++    }
++
++    @Override
++    public void handleBlockAction(S24PacketBlockAction packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleBlockAction(packetIn);
++    }
++
++    @Override
++    public void handleBlockBreakAnim(S25PacketBlockBreakAnim packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleBlockBreakAnim(packetIn);
++    }
++
++    @Override
++    public void handleMapChunkBulk(S26PacketMapChunkBulk packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleMapChunkBulk(packetIn);
++    }
++
++    @Override
++    public void handleChangeGameState(S2BPacketChangeGameState packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleChangeGameState(packetIn);
++    }
++
++    @Override
++    public void handleMaps(S34PacketMaps packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleMaps(packetIn);
++    }
++
++    @Override
++    public void handleEffect(S28PacketEffect packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleEffect(packetIn);
++    }
++
++    @Override
++    public void handleStatistics(S37PacketStatistics packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleStatistics(packetIn);
++    }
++
++    @Override
++    public void handleEntityEffect(S1DPacketEntityEffect packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleEntityEffect(packetIn);
++    }
++
++    @Override
++    public void handleCombatEvent(S42PacketCombatEvent packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleCombatEvent(packetIn);
++    }
++
++    @Override
++    public void handleServerDifficulty(S41PacketServerDifficulty packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleServerDifficulty(packetIn);
++    }
++
++    @Override
++    public void handleCamera(S43PacketCamera packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleCamera(packetIn);
++    }
++
++    @Override
++    public void handleWorldBorder(S44PacketWorldBorder packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleWorldBorder(packetIn);
++    }
++
++    @Override
++    public void handleTitle(S45PacketTitle packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleTitle(packetIn);
++    }
++
++    @Override
++    public void handleSetCompressionLevel(S46PacketSetCompressionLevel packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleSetCompressionLevel(packetIn);
++    }
++
++    @Override
++    public void handlePlayerListHeaderFooter(S47PacketPlayerListHeaderFooter packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handlePlayerListHeaderFooter(packetIn);
++    }
++
++    @Override
++    public void handleRemoveEntityEffect(S1EPacketRemoveEntityEffect packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleRemoveEntityEffect(packetIn);
++    }
++
++    @Override
++    public void handlePlayerListItem(S38PacketPlayerListItem packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handlePlayerListItem(packetIn);
++    }
++
++    @Override
++    public void handleKeepAlive(S00PacketKeepAlive packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleKeepAlive(packetIn);
++    }
++
++    @Override
++    public void handlePlayerAbilities(S39PacketPlayerAbilities packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handlePlayerAbilities(packetIn);
++    }
++
++    @Override
++    public void handleTabComplete(S3APacketTabComplete packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleTabComplete(packetIn);
++    }
++
++    @Override
++    public void handleSoundEffect(S29PacketSoundEffect packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleSoundEffect(packetIn);
++    }
++
++    @Override
++    public void handleResourcePack(S48PacketResourcePackSend packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleResourcePack(packetIn);
++    }
++
++    @Override
++    public void handleEntityNBT(S49PacketUpdateEntityNBT packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleEntityNBT(packetIn);
++    }
++
++    @Override
++    public void handleCustomPayload(S3FPacketCustomPayload packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleCustomPayload(packetIn);
++    }
++
++    @Override
++    public void handleScoreboardObjective(S3BPacketScoreboardObjective packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleScoreboardObjective(packetIn);
++    }
++
++    @Override
++    public void handleUpdateScore(S3CPacketUpdateScore packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleUpdateScore(packetIn);
++    }
++
++    @Override
++    public void handleDisplayScoreboard(S3DPacketDisplayScoreboard packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleDisplayScoreboard(packetIn);
++    }
++
++    @Override
++    public void handleTeams(S3EPacketTeams packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleTeams(packetIn);
++    }
++
++    @Override
++    public void handleParticles(S2APacketParticles packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleParticles(packetIn);
++    }
++
++    @Override
++    public void handleEntityProperties(S20PacketEntityProperties packetIn) {
++        PacketLogger packetLogger = ModuleRegistry.getModuleByClass(PacketLogger.class);
++        if (packetLogger != null) packetLogger.handlePacket(packetIn);
++
++        super.handleEntityProperties(packetIn);
++    }
++}
+diff --git a/src/main/java/com/jlmsz/util/PacketLogger.java b/src/main/java/com/jlmsz/util/PacketLogger.java
+new file mode 100644
+index 0000000..c83ebce
+--- /dev/null
++++ b/src/main/java/com/jlmsz/util/PacketLogger.java
+@@ -0,0 +1,97 @@
++package com.jlmsz.util;
++
++import com.google.gson.*;
++import com.jlmsz.module.Module;
++import com.jlmsz.module.ModuleCategory;
++import net.minecraft.item.Item;
++import net.minecraft.item.ItemStack;
++import net.minecraft.network.Packet;
++import net.minecraft.network.PacketBuffer;
++
++import java.io.BufferedWriter;
++import java.io.File;
++import java.io.FileWriter;
++import java.nio.file.Paths;
++import java.util.UUID;
++import java.util.concurrent.ExecutorService;
++import java.util.concurrent.Executors;
++
++public class PacketLogger extends Module {
++
++    private final File packetsDir = new File("./packets/");
++    private ExecutorService threadPool;
++    private final Gson gson;
++
++    public PacketLogger() {
++        super("PacketLogger", "Logs packets to disk", ModuleCategory.UTIL);
++        gson = new GsonBuilder().setExclusionStrategies(new ExclusionStrategy() {
++                    @Override
++                    public boolean shouldSkipField(FieldAttributes fieldAttributes) {
++                        return false;
++                    }
++
++                    @Override
++                    public boolean shouldSkipClass(Class<?> aClass) {
++                        return aClass.equals(PacketBuffer.class);
++                    }
++                })
++                .registerTypeAdapter(ItemStack.class, (JsonSerializer<ItemStack>) (itemStack, type, jsonSerializationContext) -> {
++                    String name = itemStack.getItem().getUnlocalizedName();
++                    int amt = itemStack.stackSize;
++                    String enchantments = itemStack.getEnchantmentTagList() != null ? itemStack.getEnchantmentTagList().toString() : null;
++
++                    JsonObject elem = new JsonObject();
++                    elem.addProperty("name", name);
++                    elem.addProperty("id", Item.getIdFromItem(itemStack.getItem()));
++                    elem.addProperty("count", amt);
++                    elem.addProperty("enchantments", enchantments);
++                    if (itemStack.hasTagCompound()) {
++                        elem.addProperty("tag", itemStack.getTagCompound().toString());
++                    }
++
++                    return elem;
++                }).create();
++    }
++
++    private void savePacket(Packet<?> packet) {
++        if (threadPool == null) return;
++        threadPool.submit(() -> {
++            if (!packetsDir.mkdir() && !packetsDir.exists()) {
++                System.out.println("Failed to mkdir: " + packetsDir.getAbsolutePath());
++                return;
++            }
++
++            String name = packet.getClass().getCanonicalName();
++            File dir = Paths.get(packetsDir.getAbsolutePath(), name).toFile();
++            if (!dir.mkdirs() && !dir.exists()) { // exists() prevents race conditions
++                System.out.println("Failed to create packet dir: " + dir.getAbsolutePath());
++                return;
++            }
++
++            File file = Paths.get(dir.getAbsolutePath(), (int) (System.currentTimeMillis() / 1000) + "-" + UUID.randomUUID().toString()).toFile();
++
++            try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
++                gson.toJson(packet, writer);
++            } catch (Exception | Error ex) {
++                System.out.println("Failed to serialize and log packet" + name + ": ");
++                ex.printStackTrace();
++            }
++        });
++    }
++
++    public void handlePacket(Packet packet) {
++        if (isEnabled()) {
++            this.savePacket(packet);
++        }
++    }
++
++    @Override
++    public void setEnabled(boolean enabled) {
++        super.setEnabled(enabled);
++        if (enabled) {
++            threadPool = Executors.newFixedThreadPool(4);
++        } else {
++            threadPool.shutdown();
++        }
++    }
++}
+diff --git a/src/main/java/net/minecraft/client/network/NetHandlerLoginClient.java b/src/main/java/net/minecraft/client/network/NetHandlerLoginClient.java
+index 558769e..ca0d45a 100644
+--- a/src/main/java/net/minecraft/client/network/NetHandlerLoginClient.java
++++ b/src/main/java/net/minecraft/client/network/NetHandlerLoginClient.java
+@@ -1,5 +1,6 @@
+ package net.minecraft.client.network;
+ 
++import com.jlmsz.util.JNetHandlerPlayClient;
+ import com.mojang.authlib.GameProfile;
+ import com.mojang.authlib.exceptions.AuthenticationException;
+ import com.mojang.authlib.exceptions.AuthenticationUnavailableException;
+@@ -101,7 +102,7 @@ public class NetHandlerLoginClient implements INetHandlerLoginClient
+     {
+         this.gameProfile = packetIn.getProfile();
+         this.networkManager.setConnectionState(EnumConnectionState.PLAY);
+-        this.networkManager.setNetHandler(new NetHandlerPlayClient(this.mc, this.previousGuiScreen, this.networkManager, this.gameProfile));
++        this.networkManager.setNetHandler(new JNetHandlerPlayClient(this.mc, this.previousGuiScreen, this.networkManager, this.gameProfile));
+     }
+ 
+     /**
+-- 
+2.34.1
+

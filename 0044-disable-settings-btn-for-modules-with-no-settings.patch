@@ -1,0 +1,50 @@
+From 4601c2adab6b2d3b3603134645a14769002152c5 Mon Sep 17 00:00:00 2001
+From: Jose Martinez <jmart652@montgomerycollege.edu>
+Date: Sun, 29 Jun 2025 03:07:36 -0400
+Subject: [PATCH 44/60] disable settings btn for modules with no settings
+
+---
+ .../com/jlmsz/gui/settings/card/ModuleCard.java     | 13 +++++++++++--
+ 1 file changed, 11 insertions(+), 2 deletions(-)
+
+diff --git a/src/main/java/com/jlmsz/gui/settings/card/ModuleCard.java b/src/main/java/com/jlmsz/gui/settings/card/ModuleCard.java
+index 4842d48..311d8d6 100644
+--- a/src/main/java/com/jlmsz/gui/settings/card/ModuleCard.java
++++ b/src/main/java/com/jlmsz/gui/settings/card/ModuleCard.java
+@@ -43,7 +43,7 @@ public class ModuleCard extends Gui {
+         // Draw bg
+         GuiUtil.drawUnscaledRect(x, y, x + width, y + height, 0xFF2b2b2b);
+         GuiUtil.drawUnscaledString(Minecraft.getMinecraft().fontRendererObj, module.getName(), x + 15, y + 15, 0xFFFFFFFF, 2);
+-        GuiUtil.drawUnscaledString(Minecraft.getMinecraft().fontRendererObj, module.getDescription(), x + 15, y + 45, 0xFFBBBBBB, 2);
++        GuiUtil.drawUnscaledSplitString(mc.fontRendererObj, module.getDescription(), x + 15, y + 45, width - 30, 0xFFBBBBBB, 2);
+ 
+         if (enabled) {
+             GuiUtil.drawUnscaledString(Minecraft.getMinecraft().fontRendererObj, "Active", x + width - mc.fontRendererObj.getStringWidth("Active") * 2 - 20, y + 15, 0xFFAAFFAA, 2);
+@@ -63,6 +63,13 @@ public class ModuleCard extends Gui {
+         configBtn.setX(btnX + btnWidth / 2 + 2);
+         configBtn.setY(btnY);
+         configBtn.drawButton(mc, mouseX, mouseY);
++        if (module.getSettings().isEmpty()) {
++            configBtn.setColor(0xFF333333);
++            configBtn.setHoverColor(0xFF333333);
++        } else {
++            configBtn.setColor(0xFF1B1B1B);
++            configBtn.setHoverColor(0xFF212121);
++        }
+     }
+ 
+     public void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
+@@ -71,7 +78,9 @@ public class ModuleCard extends Gui {
+         if (enableBtn.mousePressed(mc, mouseX, mouseY)) {
+             module.setEnabled(!module.isEnabled());
+         } else if (configBtn.mousePressed(mc, mouseX, mouseY)) {
+-            this.switcher.switchPanel(viewFactory.createConfigureModuleView(module));
++            if (!module.getSettings().isEmpty()) {
++                this.switcher.switchPanel(viewFactory.createConfigureModuleView(module));
++            }
+         }
+     }
+ 
+-- 
+2.34.1
+
