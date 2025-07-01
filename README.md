@@ -8,3 +8,9 @@ Minecraft code is copyrighted, so I cannot publicly release the entire repo. Rat
 I plan to make a bytecode diffing and patching tool at a later date to simplify this process.
 
 Note that these patches contain every commit, if you're interested at looking at the commit history for the project.
+
+## Demo
+
+https://github.com/user-attachments/assets/f551b61d-215d-4785-ba11-fec6ab40a57b
+
+
